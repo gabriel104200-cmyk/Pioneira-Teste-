@@ -9,7 +9,7 @@
   <script>
     // Se seu site for: https://SEUUSUARIO.github.io/Pioneira/
     // então BASE_PATH = "/Pioneira"
-    const BASE_PATH = "/PIONEIRA";
+    const BASE_PATH = "/Pioneira-Teste-";
   </script>
 
   <link rel="manifest" href="./manifest.json">
@@ -386,7 +386,23 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
   const LS = (k, v) => v === undefined ? localStorage.getItem(k) : localStorage.setItem(k, v);
-  const LSJ = (k, v) => v === undefined ? JSON.parse(localStorage.getItem(k) || "null") : localStorage.setItem(k, JSON.stringify(v));
+  const LSJ = (k, v) => {
+    if(v !== undefined){
+      localStorage.setItem(k, JSON.stringify(v));
+      return v;
+    }
+
+    const raw = localStorage.getItem(k);
+    if(raw === null || raw === "") return null;
+
+    try{
+      return JSON.parse(raw);
+    }catch(error){
+      console.warn(`Dados inválidos no armazenamento local: ${k}`, error);
+      localStorage.removeItem(k);
+      return null;
+    }
+  };
 
   function toast(msg, ok=true){
     const el = document.createElement("div");
@@ -1461,9 +1477,11 @@ function limparBateuFuturo(){
 }
   
   // ---------- Init ----------
-$("#txManual").value = LS("manual")||"";
+  document.addEventListener("DOMContentLoaded", ()=>{
+    // Mostra login ou painel antes de carregar os demais dados.
+    setupUI();
+
     // Puxar dados salvos
-    $("#txManual").value = LS("manual")||"";
     const exs = LSJ("exs");
 if(exs){
   $("#exSaldo").value = exs.saldo ?? 0;
@@ -1501,7 +1519,6 @@ if(exs){
       toggleBox("recoverBox", false);
     };
 
-    setupUI();
 limparBateuFuturo();
     const v = (location.hash||"#inicio").replace("#","");
     setView(v);
@@ -1511,11 +1528,11 @@ limparBateuFuturo();
 carregarResumoDoDia(LS("exs_selected_day"));
 montarCalendario();
 
-    // Register SW
+    // Ambiente de teste: remove versões antigas em cache.
     if("serviceWorker" in navigator){
-      navigator.serviceWorker.register("./sw.js")
-        .then(()=>console.log("SW ok"))
-        .catch(()=>console.log("SW falhou"));
+      navigator.serviceWorker.getRegistrations()
+        .then(registrations => registrations.forEach(registration => registration.unregister()))
+        .catch(error => console.warn("Não foi possível remover o service worker antigo.", error));
     }
   });
 </script>
