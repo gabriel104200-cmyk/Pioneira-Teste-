@@ -105,8 +105,8 @@
           <a href="#inicio" data-view="inicio" class="active">Início <span class="muted">›</span></a>
           <a href="#transferencia" data-view="transferencia">Transferência <span class="muted">Editar</span></a>
           <a href="#zeramento" data-view="zeramento">Zeramento <span class="muted">Editar</span></a>
-          <a href="#requisicao" data-view="requisicao">Requisições <span class="muted">›</span></a>
-          <a href="#manual" data-view="manual">✍️ Manual <span class="muted">›</span></a>
+<a href="#requisicao" data-view="requisicao">Requisições Separação <span class="muted">›</span></a>
+<a href="#requisicaoConf" data-view="requisicaoConf">Requisições Conferência <span class="muted">›</span></a>
           <a href="#exs" data-view="exs">⚖️ Entrada x Saída <span class="muted">›</span></a>
           <a href="#conferencia" data-view="conferencia">Conferência <span class="muted">›</span></a>
           <a href="#producao" data-view="producao">Conf. Estoque <span class="muted">Abrir</span></a>
@@ -235,7 +235,7 @@
 
           <!-- REQUISIÇÃO -->
           <section data-section="requisicao" class="hidden">
-            <h2>📌 Requisição</h2>
+        <h2>📌 Requisições Separação</h2>
             <p class="muted">Cole vários pedidos que o sistema separa pelo número do pedido e importe.</p>
             <textarea id="txReq" placeholder="Pedido;Cliente;Código;Item;Grade1;Grade2;Grade3;Qtd"></textarea>
             <div class="row" style="margin-top:10px">
@@ -246,19 +246,19 @@
             <div id="tbReq"></div>
           </section>
 
-          <!-- MANUAL -->
-          <section data-section="manual" class="hidden">
-            <h2>✍️ Requisição Manual</h2>
-            <p class="muted">Cole ou digite a requisição manual.</p>
-            <textarea id="txManual" placeholder="Digite aqui..."></textarea>
+           <!-- REQUISIÇÃO -->
+         <section data-section="requisicaoConf">
+      <h2>📌 Requisições Conferência</h2>
+            <p class="muted">Cole vários pedidos que o sistema separa pelo número do pedido e importe.</p>
+            <textarea id="txReq" placeholder="Pedido;Cliente;Código;Item;Grade1;Grade2;Grade3;Qtd"></textarea>
             <div class="row" style="margin-top:10px">
-              <button class="btn primary" onclick="salvarManual()">Importar RI</button>
-              <button class="btn" onclick="limparManual()">Limpar</button>
+              <button class="btn primary" onclick="importarTabela('req')">Importação</button>
+              <button class="btn" onclick="limparTabela('req')">Limpar</button>
+              <button class="btn" onclick="baixarTxt('req')">Baixar TXT</button>
             </div>
-            <div class="sep"></div>
-            <div class="muted tiny">Salvo no navegador.</div>
+            <div id="tbReq"></div>
           </section>
-
+          
           <!-- ENTRADA x SAÍDA -->
           <section data-section="exs" class="hidden">
             <h2>⚖️ Entrada x Saída</h2>
