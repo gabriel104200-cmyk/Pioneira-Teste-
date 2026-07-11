@@ -131,6 +131,19 @@
       .splash-title{font-size:28px}
     }
 
+
+    /* Cadastro de produtos */
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    .status-box{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(16,19,28,.55)}
+    .status-box.error{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.08)}
+    .status-box.success{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.08)}
+    .product-table-wrap{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:12px;margin-top:12px}
+    .product-table-wrap table{margin-top:0;min-width:1050px}
+    .product-table-wrap thead{position:sticky;top:0;background:#141823;z-index:1}
+    .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px}
+    @media(max-width:760px){.form-grid{grid-template-columns:1fr}}
+
     .hidden{display:none}
   </style>
 </head>
@@ -173,6 +186,7 @@
           <a href="#exs" data-view="exs">⚖️ Entrada x Saída <span class="muted">›</span></a>
           <a href="#conferencia" data-view="conferencia">Conferência <span class="muted">›</span></a>
           <a href="#producao" data-view="producao">Conf. Estoque <span class="muted">Abrir</span></a>
+          <a href="#produtos" data-view="produtos">📦 Produtos <span class="muted">Cadastro</span></a>
           <a href="#admin" data-view="admin">🛠️ Admin <span class="muted">Controle</span></a>
         </div>
 
@@ -406,6 +420,41 @@
 
   <div id="tbProd"></div>
 </section>
+
+
+          <!-- PRODUTOS -->
+          <section data-section="produtos" class="hidden">
+            <h2>📦 Cadastro de Produtos</h2>
+            <p class="muted">
+              Cole a planilha com as colunas:
+              Cod.; Produto; Grade 1; Grade 2; Grade 3; Unidade; Código Unidade; Caixa; Código Caixa.
+            </p>
+
+            <textarea id="txProdutosImport" placeholder="Cod.&#9;Produto&#9;Grade 1&#9;Grade 2&#9;Grade 3&#9;Unidade&#9;Código Unidade&#9;Caixa&#9;Código Caixa"></textarea>
+
+            <div class="toolbar">
+              <button class="btn primary" id="btnValidarProdutos">Validar dados</button>
+              <button class="btn good" id="btnSalvarProdutos">Salvar no Firebase</button>
+              <button class="btn" id="btnLimparProdutos">Limpar</button>
+            </div>
+
+            <div id="produtosStatus" class="status-box hidden"></div>
+            <div id="produtosPreview"></div>
+
+            <div class="sep"></div>
+
+            <div class="form-grid">
+              <div>
+                <label class="muted">Pesquisar produto ou código de barras</label>
+                <input id="pesquisaProdutos" placeholder="Ex.: 2900, Combate Gola ou 789...">
+              </div>
+              <div style="display:flex;align-items:end">
+                <button class="btn" id="btnCarregarProdutos" style="width:100%">Atualizar lista</button>
+              </div>
+            </div>
+
+            <div id="listaProdutos"></div>
+          </section>
 
           <!-- ADMIN -->
           <section data-section="admin" class="hidden">
@@ -1567,6 +1616,233 @@ function limparProducao(){
   toast("Limpo.");
 }
 
+
+// ---------- Produtos / Firestore ----------
+const CONVERSOES_TXT = {
+  "MASCULINO": "M",
+  "FEMININO": "F",
+  "PRETO": "PRE",
+  "BRANCO": "BRA",
+  "AMARELO": "AMA",
+  "ROSA": "ROS",
+  "VERDE": "VER",
+  "AZUL": "AZU",
+  "PP": "PP",
+  "P": "P",
+  "M": "M",
+  "G": "G",
+  "GG": "GG",
+  "XG": "XG",
+  "XGG": "XGG",
+  "EG": "EG",
+  "EGG": "EGG"
+};
+
+let produtosValidados = [];
+
+function normalizarTextoProduto(valor){
+  return (valor ?? "").toString().trim();
+}
+
+function converterGradeTXT(valor){
+  const original = normalizarTextoProduto(valor);
+  if(!original) return "";
+  return CONVERSOES_TXT[original.toUpperCase()] || original.toUpperCase();
+}
+
+function validarProdutosColados(){
+  const rows = parseLines($("#txProdutosImport").value);
+  const status = $("#produtosStatus");
+  const preview = $("#produtosPreview");
+
+  produtosValidados = [];
+  status.className = "status-box";
+  status.classList.remove("hidden");
+  preview.innerHTML = "";
+
+  if(!rows.length){
+    status.classList.add("error");
+    status.textContent = "Cole os produtos antes de validar.";
+    return [];
+  }
+
+  const inicio = rows[0] && /cod|produto|grade/i.test(rows[0].join(" "))
+    ? 1
+    : 0;
+
+  const erros = [];
+  const codigosBarras = new Map();
+
+  for(let i=inicio; i<rows.length; i++){
+    const r = rows[i];
+    if(!r || r.every(c => !normalizarTextoProduto(c))) continue;
+
+    if(r.length < 9){
+      erros.push(`Linha ${i+1}: possui menos de 9 colunas.`);
+      continue;
+    }
+
+    const produto = {
+      codigo: normalizarTextoProduto(r[0]).toUpperCase(),
+      descricao: normalizarTextoProduto(r[1]),
+      grade1: normalizarTextoProduto(r[2]),
+      grade2: normalizarTextoProduto(r[3]),
+      grade3: normalizarTextoProduto(r[4]),
+      grade1Txt: converterGradeTXT(r[2]),
+      grade2Txt: converterGradeTXT(r[3]),
+      grade3Txt: converterGradeTXT(r[4]),
+      quantidadeUnidade: Number(normalizarTextoProduto(r[5]).replace(",", ".")) || 1,
+      codigoBarrasUnidade: normalizarTextoProduto(r[6]),
+      quantidadeCaixa: Number(normalizarTextoProduto(r[7]).replace(",", ".")) || 0,
+      codigoBarrasCaixa: normalizarTextoProduto(r[8]),
+      ativo: true
+    };
+
+    if(!produto.codigo) erros.push(`Linha ${i+1}: código do produto vazio.`);
+    if(!produto.descricao) erros.push(`Linha ${i+1}: descrição vazia.`);
+    if(!produto.codigoBarrasUnidade && !produto.codigoBarrasCaixa){
+      erros.push(`Linha ${i+1}: informe pelo menos um código de barras.`);
+    }
+
+    for(const [tipo, barras] of [
+      ["unidade", produto.codigoBarrasUnidade],
+      ["caixa", produto.codigoBarrasCaixa]
+    ]){
+      if(!barras) continue;
+      if(codigosBarras.has(barras)){
+        erros.push(
+          `Linha ${i+1}: código de barras ${barras} repetido com a linha ${codigosBarras.get(barras)}.`
+        );
+      }else{
+        codigosBarras.set(barras, i+1);
+      }
+    }
+
+    produto.id = [
+      produto.codigo,
+      produto.grade1Txt || "SEM-G1",
+      produto.grade2Txt || "SEM-G2",
+      produto.grade3Txt || "SEM-G3"
+    ].join("__").replace(/[^A-Z0-9_-]/gi, "_");
+
+    produtosValidados.push(produto);
+  }
+
+  if(erros.length){
+    produtosValidados = [];
+    status.classList.add("error");
+    status.innerHTML = `<strong>Foram encontrados ${erros.length} erro(s):</strong><br>${erros.slice(0,20).map(escapeHtml).join("<br>")}`;
+    if(erros.length > 20) status.innerHTML += `<br>... e mais ${erros.length-20} erro(s).`;
+    return [];
+  }
+
+  status.classList.add("success");
+  status.innerHTML = `<strong>${produtosValidados.length} produto(s) validado(s).</strong> Confira a prévia antes de salvar.`;
+
+  preview.innerHTML = `
+    <div class="product-table-wrap">
+      ${renderTable(
+        ["Código","Produto","G1","G2","G3","G1 TXT","G2 TXT","G3 TXT","Barras Unidade","Qtd. Caixa","Barras Caixa"],
+        produtosValidados.slice(0,100).map(p => [
+          p.codigo,p.descricao,p.grade1,p.grade2,p.grade3,
+          p.grade1Txt,p.grade2Txt,p.grade3Txt,
+          p.codigoBarrasUnidade,p.quantidadeCaixa,p.codigoBarrasCaixa
+        ])
+      )}
+    </div>
+    ${produtosValidados.length > 100 ? '<div class="muted tiny" style="margin-top:8px">Prévia limitada aos primeiros 100 registros.</div>' : ''}
+  `;
+
+  return produtosValidados;
+}
+
+async function salvarProdutosFirebase(){
+  if(!window.firebaseSalvarProdutos){
+    toast("Firebase ainda está carregando.", false);
+    return;
+  }
+
+  const produtos = produtosValidados.length
+    ? produtosValidados
+    : validarProdutosColados();
+
+  if(!produtos.length) return;
+
+  if(!confirm(`Salvar ou atualizar ${produtos.length} produto(s) no Firebase?`)) return;
+
+  const status = $("#produtosStatus");
+  status.className = "status-box";
+  status.classList.remove("hidden");
+  status.textContent = "Salvando produtos no Firebase...";
+
+  try{
+    const resultado = await window.firebaseSalvarProdutos(produtos);
+    status.classList.add("success");
+    status.innerHTML = `<strong>Concluído:</strong> ${resultado} produto(s) salvo(s) ou atualizado(s).`;
+    toast("Produtos salvos no Firebase.");
+    await carregarProdutosFirebase();
+  }catch(error){
+    console.error(error);
+    status.classList.add("error");
+    status.innerHTML = `<strong>Erro ao salvar:</strong> ${escapeHtml(error.message || "Falha desconhecida.")}`;
+    toast("Não foi possível salvar os produtos.", false);
+  }
+}
+
+async function carregarProdutosFirebase(){
+  if(!window.firebaseListarProdutos){
+    toast("Firebase ainda está carregando.", false);
+    return;
+  }
+
+  const lista = $("#listaProdutos");
+  lista.innerHTML = '<div class="muted" style="margin-top:12px">Carregando produtos...</div>';
+
+  try{
+    const termo = ($("#pesquisaProdutos").value || "").trim().toLowerCase();
+    let produtos = await window.firebaseListarProdutos();
+
+    if(termo){
+      produtos = produtos.filter(p =>
+        [
+          p.codigo,p.descricao,p.grade1,p.grade2,p.grade3,
+          p.codigoBarrasUnidade,p.codigoBarrasCaixa
+        ].some(v => (v ?? "").toString().toLowerCase().includes(termo))
+      );
+    }
+
+    if(!produtos.length){
+      lista.innerHTML = '<div class="status-box">Nenhum produto encontrado.</div>';
+      return;
+    }
+
+    lista.innerHTML = `
+      <div class="muted tiny" style="margin-top:12px">${produtos.length} produto(s) encontrado(s).</div>
+      <div class="product-table-wrap">
+        ${renderTable(
+          ["Código","Produto","Grade 1","Grade 2","Grade 3","Barras Unidade","Qtd. Caixa","Barras Caixa","Status"],
+          produtos.map(p => [
+            p.codigo,p.descricao,p.grade1,p.grade2,p.grade3,
+            p.codigoBarrasUnidade,p.quantidadeCaixa,p.codigoBarrasCaixa,
+            p.ativo === false ? "Inativo" : "Ativo"
+          ])
+        )}
+      </div>
+    `;
+  }catch(error){
+    console.error(error);
+    lista.innerHTML = `<div class="status-box error">Erro ao carregar produtos: ${escapeHtml(error.message || "")}</div>`;
+  }
+}
+
+function limparImportacaoProdutos(){
+  $("#txProdutosImport").value = "";
+  $("#produtosPreview").innerHTML = "";
+  $("#produtosStatus").className = "status-box hidden";
+  produtosValidados = [];
+}
+
+
   // Admin
   function salvarEmail(){ LS("email", $("#adEmail").value||""); toast("Email salvo."); }
   function carregarEmail(){ $("#adEmail").value = LS("email")||""; toast("Email carregado."); }
@@ -1625,6 +1901,14 @@ if(exs){
       campo.addEventListener("keydown", event =>{
         if(event.key === "Enter") $("#btnLogin").click();
       });
+    });
+
+    $("#btnValidarProdutos").onclick = validarProdutosColados;
+    $("#btnSalvarProdutos").onclick = salvarProdutosFirebase;
+    $("#btnLimparProdutos").onclick = limparImportacaoProdutos;
+    $("#btnCarregarProdutos").onclick = carregarProdutosFirebase;
+    $("#pesquisaProdutos").addEventListener("keydown", event =>{
+      if(event.key === "Enter") carregarProdutosFirebase();
     });
 
     setTimeout(()=>{
