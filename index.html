@@ -178,8 +178,8 @@
 
         <div class="sep"></div>
         <div class="muted tiny">
-          ✅ Tudo roda no navegador (offline).<br/>
-          ⚠️ Não é sistema “server”, é painel/apoio.
+          ✅ Login conectado ao Firebase.<br/>
+          ☁️ Dados compartilhados serão ativados por etapas.
            👤 Criado por Gabriel Andrade.
         </div>
       </div>
@@ -193,8 +193,8 @@
             <p class="login-subtitle">Controle de Operações Logísticas</p>
 
             <div class="login-field">
-              <label class="muted" for="lgUser">Usuário</label>
-              <input id="lgUser" autocomplete="username" placeholder="Digite seu usuário" />
+              <label class="muted" for="lgUser">E-mail</label>
+              <input id="lgUser" type="email" autocomplete="username" placeholder="seuemail@pioneira.com" />
             </div>
 
             <div class="login-field">
@@ -204,42 +204,21 @@
 
             <button class="btn primary login-enter" id="btnLogin">Entrar</button>
 
-            <div class="login-actions">
-              <button class="btn" id="btnCreate">Criar conta</button>
+            <div class="login-actions" style="grid-template-columns:1fr">
               <button class="btn" id="btnRecover">Recuperar senha</button>
-            </div>
-
-            <div id="createBox" class="hidden login-panel">
-              <h2>🧾 Criar conta</h2>
-              <div class="login-field">
-                <label class="muted" for="crUser">Usuário</label>
-                <input id="crUser" autocomplete="username" placeholder="Escolha um usuário">
-              </div>
-              <div class="login-field">
-                <label class="muted" for="crPass">Senha</label>
-                <input id="crPass" type="password" autocomplete="new-password" placeholder="Escolha uma senha">
-              </div>
-              <div class="login-field">
-                <label class="muted" for="crEmail">E-mail</label>
-                <input id="crEmail" type="email" autocomplete="email" placeholder="seuemail@exemplo.com">
-              </div>
-              <div class="row" style="margin-top:14px">
-                <button class="btn good" id="btnDoCreate" style="flex:1">Cadastrar</button>
-                <button class="btn" style="flex:1" onclick="toggleBox('createBox', false)">Voltar</button>
-              </div>
             </div>
 
             <div id="recoverBox" class="hidden login-panel">
               <h2>📨 Recuperar senha</h2>
               <div class="login-field">
-                <label class="muted" for="rcUser">Usuário</label>
-                <input id="rcUser" placeholder="Digite o usuário cadastrado">
+                <label class="muted" for="rcUser">E-mail</label>
+                <input id="rcUser" type="email" autocomplete="email" placeholder="Digite seu e-mail cadastrado">
               </div>
               <div class="row" style="margin-top:14px">
-                <button class="btn primary" id="btnDoRecover" style="flex:1">Consultar</button>
+                <button class="btn primary" id="btnDoRecover" style="flex:1">Enviar link</button>
                 <button class="btn" style="flex:1" onclick="toggleBox('recoverBox', false)">Voltar</button>
               </div>
-              <p class="muted tiny login-footer">Os dados de acesso ficam salvos somente neste navegador.</p>
+              <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
             <div class="muted tiny login-footer">Versão 1.0 • Pioneira Indústria Têxtil</div>
@@ -431,7 +410,7 @@
           <!-- ADMIN -->
           <section data-section="admin" class="hidden">
             <h2>🛠️ Admin</h2>
-            <p class="muted">Controles locais (email, permissões e manutenção).</p>
+            <p class="muted">Administração de usuários, permissões e dados do sistema.</p>
 
             <div style="max-width:520px">
               <label class="muted">Email (somente registro local)</label>
@@ -445,7 +424,7 @@
 
             <div class="sep"></div>
             <div class="muted tiny">
-              Se você quiser deixar isso “de verdade” (com login real e banco), dá pra ligar num Google Apps Script / Firebase depois.
+              O login já utiliza Firebase Authentication. O cadastro de usuários e permissões será implementado na próxima etapa.
             </div>
           </section>
 
@@ -509,43 +488,94 @@ function parseLines(text){
     return s.replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
   }
 
-  // ---------- Auth (local) ----------
-  function toggleBox(id, show){ $("#"+id).classList.toggle("hidden", !show); }
-  function getUsers(){ return LSJ("users") || []; }
-  function setUsers(u){ LSJ("users", u); }
-
-  function login(u,p){
-    const users = getUsers();
-    const found = users.find(x=>x.user===u && x.pass===p);
-    if(!found){ toast("Usuário ou senha inválidos.", false); return false; }
-    LS("session", u);
-    setupUI();
-    toast("Logado com sucesso.");
-    return true;
+  // ---------- Auth (Firebase) ----------
+  function toggleBox(id, show){
+    const el = $("#"+id);
+    if(el) el.classList.toggle("hidden", !show);
   }
 
-  function logout(){
-    localStorage.removeItem("session");
-    setupUI();
-    toast("Saiu do sistema.");
-  }
+  let usuarioFirebaseAtual = null;
 
-  function setupUI(){
-    const u = LS("session");
-    document.body.classList.toggle("logged-out", !u);
+  function setupUI(user = usuarioFirebaseAtual){
+    usuarioFirebaseAtual = user || null;
+    const logado = !!usuarioFirebaseAtual;
 
-    $("#userTag").textContent = u ? `👤 ${u}` : "Deslogado";
-    $("#btnLogout").disabled = !u;
+    document.body.classList.toggle("logged-out", !logado);
 
-    $("#loginBox").classList.toggle("hidden", !!u);
-    $("#views").classList.toggle("hidden", !u);
+    $("#userTag").textContent = logado
+      ? `👤 ${usuarioFirebaseAtual.email || "Usuário"}`
+      : "Deslogado";
 
-    if(u){
+    $("#btnLogout").disabled = !logado;
+    $("#loginBox").classList.toggle("hidden", logado);
+    $("#views").classList.toggle("hidden", !logado);
+
+    if(logado){
       refreshResumo();
       montarCalendario();
     }else{
-      toggleBox("createBox", false);
       toggleBox("recoverBox", false);
+    }
+  }
+
+  window.aplicarEstadoFirebase = setupUI;
+
+  async function login(email, senha){
+    if(!window.firebaseLogin){
+      toast("Firebase ainda está carregando. Aguarde alguns segundos.", false);
+      return;
+    }
+    if(!email || !senha){
+      toast("Preencha e-mail e senha.", false);
+      return;
+    }
+    try{
+      await window.firebaseLogin(email, senha);
+      toast("Login realizado com sucesso.");
+    }catch(error){
+      console.error(error);
+      const mensagens = {
+        "auth/invalid-credential": "E-mail ou senha inválidos.",
+        "auth/user-disabled": "Este usuário está desativado.",
+        "auth/too-many-requests": "Muitas tentativas. Aguarde e tente novamente.",
+        "auth/network-request-failed": "Falha de conexão com a internet."
+      };
+      toast(mensagens[error.code] || "Não foi possível entrar.", false);
+    }
+  }
+
+  async function logout(){
+    if(!window.firebaseLogout) return;
+    try{
+      await window.firebaseLogout();
+      toast("Você saiu do sistema.");
+    }catch(error){
+      console.error(error);
+      toast("Não foi possível sair.", false);
+    }
+  }
+
+  async function recuperarSenha(email){
+    if(!window.firebaseResetPassword){
+      toast("Firebase ainda está carregando. Aguarde alguns segundos.", false);
+      return;
+    }
+    if(!email){
+      toast("Informe o e-mail cadastrado.", false);
+      return;
+    }
+    try{
+      await window.firebaseResetPassword(email);
+      toast("Link de recuperação enviado para o e-mail informado.");
+      toggleBox("recoverBox", false);
+    }catch(error){
+      console.error(error);
+      const mensagens = {
+        "auth/invalid-email": "E-mail inválido.",
+        "auth/user-not-found": "E-mail não encontrado.",
+        "auth/too-many-requests": "Muitas tentativas. Aguarde e tente novamente."
+      };
+      toast(mensagens[error.code] || "Não foi possível enviar o link.", false);
     }
   }
 
@@ -1561,8 +1591,8 @@ function limparBateuFuturo(){
   
   // ---------- Init ----------
   document.addEventListener("DOMContentLoaded", ()=>{
-    // Mostra login ou painel antes de carregar os demais dados.
-    setupUI();
+    // O módulo Firebase chamará setupUI quando confirmar o estado da sessão.
+    setupUI(null);
 
     // Puxar dados salvos
     const exs = LSJ("exs");
@@ -1575,37 +1605,20 @@ if(exs){
   calcEXS();
 }
 
-    // Login UI
-    $("#btnLogin").onclick = ()=> login($("#lgUser").value.trim(), $("#lgPass").value);
+    // Login Firebase
+    $("#btnLogin").onclick = ()=> login(
+      $("#lgUser").value.trim(),
+      $("#lgPass").value
+    );
+
     $("#btnLogout").onclick = logout;
-    $("#btnCreate").onclick = ()=>{
-      toggleBox("recoverBox", false);
-      toggleBox("createBox", true);
-    };
+
     $("#btnRecover").onclick = ()=>{
-      toggleBox("createBox", false);
       toggleBox("recoverBox", true);
     };
 
-    $("#btnDoCreate").onclick = ()=>{
-      const user = $("#crUser").value.trim();
-      const pass = $("#crPass").value;
-      const email = $("#crEmail").value.trim();
-      if(!user || !pass){ toast("Preencha usuário e senha.", false); return; }
-      const users = getUsers();
-      if(users.some(x=>x.user===user)){ toast("Usuário já existe.", false); return; }
-      users.push({user, pass, email});
-      setUsers(users);
-      toast("Conta criada. Você já pode entrar.");
-      toggleBox("createBox", false);
-    };
-
     $("#btnDoRecover").onclick = ()=>{
-      const user = $("#rcUser").value.trim();
-      const u = getUsers().find(x=>x.user===user);
-      if(!u){ toast("Usuário não encontrado.", false); return; }
-      toast(`Conta encontrada. Email registrado: ${u.email || "(sem email)"} (senha não é enviada aqui).`);
-      toggleBox("recoverBox", false);
+      recuperarSenha($("#rcUser").value.trim());
     };
 
     [$("#lgUser"), $("#lgPass")].forEach(campo =>{
@@ -1639,5 +1652,44 @@ montarCalendario();
     }
   });
 </script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    sendPasswordResetEmail,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9S5WDyaGrco4pfMTd676aALtIKZqVrQw",
+    authDomain: "pioneira-logistica.firebaseapp.com",
+    projectId: "pioneira-logistica",
+    storageBucket: "pioneira-logistica.firebasestorage.app",
+    messagingSenderId: "609222907636",
+    appId: "1:609222907636:web:4a421df62afeb523f430a1",
+    measurementId: "G-9GMQMMWX8S"
+  };
+
+  const firebaseApp = initializeApp(firebaseConfig);
+  const auth = getAuth(firebaseApp);
+  const db = getFirestore(firebaseApp);
+
+  window.firebaseAuth = auth;
+  window.firebaseDb = db;
+  window.firebaseLogin = (email, senha) => signInWithEmailAndPassword(auth, email, senha);
+  window.firebaseLogout = () => signOut(auth);
+  window.firebaseResetPassword = (email) => sendPasswordResetEmail(auth, email);
+
+  onAuthStateChanged(auth, (user) => {
+    if(window.aplicarEstadoFirebase){
+      window.aplicarEstadoFirebase(user);
+    }
+  });
+</script>
+
 </body>
 </html>
