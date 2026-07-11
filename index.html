@@ -131,6 +131,14 @@
       .splash-title{font-size:28px}
     }
 
+
+    .produto-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .produto-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .produto-status{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(16,19,28,.55)}
+    .produto-table-wrap{overflow:auto;max-height:480px;margin-top:12px}
+    .produto-table-wrap table{min-width:1100px}
+    @media(max-width:760px){.produto-grid{grid-template-columns:1fr}}
+
     .hidden{display:none}
   </style>
 </head>
@@ -148,7 +156,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.0</span>
+        <span class="pill" id="ver">v2.1</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -173,6 +181,7 @@
           <a href="#exs" data-view="exs" data-permissao="entrada_saida">⚖️ Entrada x Saída <span class="muted">›</span></a>
           <a href="#conferencia" data-view="conferencia" data-permissao="conferencia">Conferência <span class="muted">›</span></a>
           <a href="#producao" data-view="producao" data-permissao="conf_estoque">Conf. Estoque <span class="muted">Abrir</span></a>
+          <a href="#produtos" data-view="produtos" data-permissao="produtos">📦 Produtos <span class="muted">Cadastro</span></a>
           <a href="#admin" data-view="admin" data-permissao="admin">🛠️ Admin <span class="muted">Controle</span></a>
         </div>
 
@@ -221,7 +230,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.0 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 2.1 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -407,6 +416,31 @@
   <div id="tbProd"></div>
 </section>
 
+
+          <!-- PRODUTOS -->
+          <section data-section="produtos" class="hidden">
+            <h2>📦 Cadastro de Produtos</h2>
+            <p class="muted">
+              Cole a planilha no formato:
+              Cod.;Produto;Grade 1;Grade 2;Grade 3;Unidade;Código Unidade;Caixa;Código Caixa
+            </p>
+
+            <textarea id="txProdutos" placeholder="2900;Conjunto De Pvc - Combate Gola;Masculino;Preto;PP;1;7898712119560;10;17898712119567"></textarea>
+
+            <div class="produto-actions">
+              <button class="btn primary" id="btnPreviewProdutos">Visualizar</button>
+              <button class="btn good" id="btnImportarProdutos">Importar para o Firebase</button>
+              <button class="btn" id="btnLimparProdutos">Limpar</button>
+              <button class="btn" id="btnCarregarProdutos">Carregar cadastrados</button>
+            </div>
+
+            <div id="produtoStatus" class="produto-status muted">
+              Nenhum produto preparado para importação.
+            </div>
+
+            <div id="tbProdutos" class="produto-table-wrap"></div>
+          </section>
+
           <!-- ADMIN -->
           <section data-section="admin" class="hidden">
             <h2>🛠️ Admin</h2>
@@ -502,7 +536,7 @@ function parseLines(text){
     administrador: [
       "inicio","transferencia","zeramento","separacao",
       "requisicao_conferencia","entrada_saida","conferencia",
-      "conf_estoque","admin"
+      "conf_estoque","produtos","admin"
     ],
     producao: ["inicio","requisicao_conferencia"],
     separacao: ["inicio","separacao"],
@@ -1653,6 +1687,178 @@ function limparProducao(){
   toast("Limpo.");
 }
 
+
+// ---------- Produtos Firebase ----------
+let produtosPreview = [];
+
+function normalizarCodigoBarras(valor){
+  return String(valor ?? "").trim().replace(/\s+/g, "");
+}
+
+function criarIdProduto(item){
+  const base = [
+    item.codigo, item.grade1, item.grade2, item.grade3
+  ].join("|").toLowerCase();
+
+  return base
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9|_-]+/g, "-")
+    .replace(/\|/g, "__")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function lerProdutosTexto(){
+  const linhas = parseLines($("#txProdutos").value);
+  const produtos = [];
+  const erros = [];
+  const barrasVistas = new Map();
+
+  linhas.forEach((r, indice)=>{
+    if(!r || r.length < 9) return;
+
+    const primeira = String(r[0] ?? "").trim().toLowerCase();
+    if(indice === 0 && (primeira === "cod." || primeira === "cod" || primeira.includes("código"))) return;
+
+    const item = {
+      codigo: String(r[0] ?? "").trim(),
+      produto: String(r[1] ?? "").trim(),
+      grade1: String(r[2] ?? "").trim(),
+      grade2: String(r[3] ?? "").trim(),
+      grade3: String(r[4] ?? "").trim(),
+      unidade: Number(String(r[5] ?? "1").replace(",", ".")) || 1,
+      codigoUnidade: normalizarCodigoBarras(r[6]),
+      caixa: Number(String(r[7] ?? "0").replace(",", ".")) || 0,
+      codigoCaixa: normalizarCodigoBarras(r[8]),
+      ativo: true
+    };
+
+    if(!item.codigo || !item.produto){
+      erros.push(`Linha ${indice+1}: código ou produto vazio.`);
+      return;
+    }
+
+    const id = criarIdProduto(item);
+    item.id = id;
+
+    for(const [tipo, barra] of [["unidade", item.codigoUnidade], ["caixa", item.codigoCaixa]]){
+      if(!barra) continue;
+      if(barrasVistas.has(barra)){
+        erros.push(`Código de barras duplicado ${barra}: ${barrasVistas.get(barra)} e ${id}.`);
+      }else{
+        barrasVistas.set(barra, id);
+      }
+    }
+
+    produtos.push(item);
+  });
+
+  return { produtos, erros };
+}
+
+function renderizarProdutos(produtos){
+  const rows = produtos.map(p=>[
+    p.codigo, p.produto, p.grade1, p.grade2, p.grade3,
+    p.unidade, p.codigoUnidade, p.caixa, p.codigoCaixa,
+    p.ativo ? "ATIVO" : "INATIVO"
+  ]);
+
+  $("#tbProdutos").innerHTML = renderTable(
+    ["Código","Produto","Grade 1","Grade 2","Grade 3","Unid.","Código Unidade","Caixa","Código Caixa","Status"],
+    rows
+  );
+}
+
+function visualizarProdutos(){
+  const { produtos, erros } = lerProdutosTexto();
+  produtosPreview = produtos;
+  renderizarProdutos(produtos);
+
+  if(erros.length){
+    $("#produtoStatus").innerHTML =
+      `<span class="bad">Foram encontrados ${erros.length} erro(s).</span><br>` +
+      erros.slice(0,10).map(escapeHtml).join("<br>");
+    toast("Revise os erros antes de importar.", false);
+    return;
+  }
+
+  $("#produtoStatus").innerHTML =
+    `<span class="ok">${produtos.length} produto(s) prontos para importação.</span>`;
+}
+
+async function importarProdutosFirebase(){
+  if(!perfilUsuarioAtual || perfilUsuarioAtual.perfil !== "administrador"){
+    toast("Somente administradores podem importar produtos.", false);
+    return;
+  }
+
+  const { produtos, erros } = lerProdutosTexto();
+
+  if(erros.length){
+    $("#produtoStatus").innerHTML =
+      `<span class="bad">Corrija os erros antes de importar.</span><br>` +
+      erros.slice(0,10).map(escapeHtml).join("<br>");
+    return;
+  }
+
+  if(!produtos.length){
+    toast("Nenhum produto válido para importar.", false);
+    return;
+  }
+
+  if(!window.firebaseImportarProdutos){
+    toast("Módulo de produtos ainda está carregando.", false);
+    return;
+  }
+
+  const btn = $("#btnImportarProdutos");
+  btn.disabled = true;
+  btn.textContent = "Importando...";
+
+  try{
+    const resultado = await window.firebaseImportarProdutos(produtos, (atual,total)=>{
+      $("#produtoStatus").textContent = `Importando ${atual} de ${total}...`;
+    });
+
+    $("#produtoStatus").innerHTML =
+      `<span class="ok">Importação concluída.</span> ` +
+      `${resultado.produtos} produto(s) e ${resultado.barras} código(s) de barras gravados.`;
+
+    toast("Produtos importados com sucesso.");
+  }catch(error){
+    console.error(error);
+    $("#produtoStatus").innerHTML =
+      `<span class="bad">Erro na importação: ${escapeHtml(error.message || "falha desconhecida")}</span>`;
+    toast("Não foi possível importar os produtos.", false);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Importar para o Firebase";
+  }
+}
+
+async function carregarProdutosFirebase(){
+  if(!window.firebaseListarProdutos){
+    toast("Módulo de produtos ainda está carregando.", false);
+    return;
+  }
+
+  $("#produtoStatus").textContent = "Carregando produtos...";
+
+  try{
+    const produtos = await window.firebaseListarProdutos();
+    produtosPreview = produtos;
+    renderizarProdutos(produtos);
+    $("#produtoStatus").innerHTML =
+      `<span class="ok">${produtos.length} produto(s) cadastrados no Firebase.</span>`;
+  }catch(error){
+    console.error(error);
+    $("#produtoStatus").innerHTML =
+      `<span class="bad">Não foi possível carregar os produtos.</span>`;
+  }
+}
+
+
   // Admin
   function salvarEmail(){ LS("email", $("#adEmail").value||""); toast("Email salvo."); }
   function carregarEmail(){ $("#adEmail").value = LS("email")||""; toast("Email carregado."); }
@@ -1707,6 +1913,17 @@ if(exs){
       recuperarSenha($("#rcUser").value.trim());
     };
 
+
+    $("#btnPreviewProdutos").onclick = visualizarProdutos;
+    $("#btnImportarProdutos").onclick = importarProdutosFirebase;
+    $("#btnLimparProdutos").onclick = ()=>{
+      $("#txProdutos").value = "";
+      $("#tbProdutos").innerHTML = "";
+      $("#produtoStatus").textContent = "Nenhum produto preparado para importação.";
+      produtosPreview = [];
+    };
+    $("#btnCarregarProdutos").onclick = carregarProdutosFirebase;
+
     [$("#lgUser"), $("#lgPass")].forEach(campo =>{
       campo.addEventListener("keydown", event =>{
         if(event.key === "Enter") $("#btnLogin").click();
@@ -1751,7 +1968,11 @@ montarCalendario();
   import {
     getFirestore,
     doc,
-    getDoc
+    getDoc,
+    collection,
+    getDocs,
+    writeBatch,
+    serverTimestamp
   } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -1778,6 +1999,76 @@ montarCalendario();
     const referencia = doc(db, "usuarios", uid);
     const snapshot = await getDoc(referencia);
     return snapshot.exists() ? snapshot.data() : null;
+  };
+
+  window.firebaseImportarProdutos = async (produtos, onProgress) => {
+    let totalProdutos = 0;
+    let totalBarras = 0;
+    const limiteLote = 400;
+
+    for(let inicio = 0; inicio < produtos.length; inicio += limiteLote){
+      const loteProdutos = produtos.slice(inicio, inicio + limiteLote);
+      const batch = writeBatch(db);
+
+      for(const produto of loteProdutos){
+        const refProduto = doc(db, "produtos", produto.id);
+
+        batch.set(refProduto, {
+          codigo: produto.codigo,
+          produto: produto.produto,
+          grade1: produto.grade1,
+          grade2: produto.grade2,
+          grade3: produto.grade3,
+          unidade: produto.unidade,
+          codigoUnidade: produto.codigoUnidade,
+          caixa: produto.caixa,
+          codigoCaixa: produto.codigoCaixa,
+          ativo: produto.ativo !== false,
+          atualizadoEm: serverTimestamp(),
+          atualizadoPor: auth.currentUser ? auth.currentUser.uid : null
+        }, { merge: true });
+
+        totalProdutos++;
+
+        if(produto.codigoUnidade){
+          batch.set(doc(db, "codigos_barras", produto.codigoUnidade), {
+            produtoId: produto.id,
+            tipo: "unidade",
+            quantidade: produto.unidade || 1,
+            ativo: true,
+            atualizadoEm: serverTimestamp()
+          }, { merge: true });
+          totalBarras++;
+        }
+
+        if(produto.codigoCaixa){
+          batch.set(doc(db, "codigos_barras", produto.codigoCaixa), {
+            produtoId: produto.id,
+            tipo: "caixa",
+            quantidade: produto.caixa || 1,
+            ativo: true,
+            atualizadoEm: serverTimestamp()
+          }, { merge: true });
+          totalBarras++;
+        }
+      }
+
+      await batch.commit();
+
+      if(onProgress){
+        onProgress(
+          Math.min(inicio + loteProdutos.length, produtos.length),
+          produtos.length
+        );
+      }
+    }
+
+    return { produtos: totalProdutos, barras: totalBarras };
+  };
+
+  window.firebaseListarProdutos = async () => {
+    const snapshot = await getDocs(collection(db, "produtos"));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   };
 
   onAuthStateChanged(auth, (user) => {
