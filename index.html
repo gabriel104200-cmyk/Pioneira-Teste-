@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sistema</title>
+  <title>PIONEIRA • Controle de Operações Logísticas</title>
 
   <!-- ✅ Ajuste BASE_PATH para o nome do seu repo no Pages -->
   <script>
@@ -77,14 +77,77 @@
     .bad{color:#fecaca}
     .ok{color:#bbf7d0}
     .tiny{font-size:12px}
+
+    /* Tela de abertura */
+    .splash-screen{
+      position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#0b0d12,#0f1116);transition:opacity .45s ease,visibility .45s ease;
+    }
+    .splash-screen.hide{opacity:0;visibility:hidden}
+    .splash-content{text-align:center;animation:splashIn .65s ease both}
+    .splash-mark{
+      width:82px;height:82px;margin:0 auto 20px;border-radius:24px;display:grid;place-items:center;
+      font-size:38px;background:linear-gradient(135deg,var(--accent),#4c1d95);box-shadow:0 18px 45px rgba(124,58,237,.32);
+    }
+    .splash-title{font-size:34px;font-weight:950;letter-spacing:2px}
+    .splash-subtitle{margin-top:8px;color:var(--muted);font-size:15px}
+    .splash-loader{width:180px;height:4px;margin:26px auto 0;border-radius:99px;background:#252a38;overflow:hidden}
+    .splash-loader::after{content:"";display:block;width:45%;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),#a78bfa);animation:loading 1.15s ease-in-out infinite}
+    @keyframes loading{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
+    @keyframes splashIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+    /* Login centralizado */
+    body.logged-out .wrap{max-width:none;padding:0}
+    body.logged-out .topbar, body.logged-out .side{display:none}
+    body.logged-out .grid{display:block;margin:0}
+    body.logged-out .main{
+      min-height:100vh;padding:24px;border:0;border-radius:0;background:transparent;box-shadow:none;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .login-shell{width:min(440px,100%)}
+    .login-card{
+      padding:34px;border:1px solid var(--line);border-radius:22px;
+      background:rgba(20,24,35,.82);box-shadow:0 24px 70px rgba(0,0,0,.48);backdrop-filter:blur(14px);
+    }
+    .login-logo{
+      width:66px;height:66px;margin:0 auto 18px;border-radius:20px;display:grid;place-items:center;
+      font-size:30px;background:linear-gradient(135deg,var(--accent),#4c1d95);box-shadow:0 14px 35px rgba(124,58,237,.28);
+    }
+    .login-title{text-align:center;font-size:27px;font-weight:950;letter-spacing:.8px;margin:0}
+    .login-subtitle{text-align:center;color:var(--muted);font-size:14px;margin:8px 0 28px}
+    .login-field{margin-top:15px}
+    .login-field label{display:block;margin-bottom:7px}
+    .login-field input{padding:13px 14px;font-size:15px}
+    .login-enter{width:100%;margin-top:20px;padding:13px 14px;font-size:15px}
+    .login-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    .login-actions .btn{width:100%}
+    .login-footer{text-align:center;margin-top:22px}
+    .login-panel{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+    .login-panel h2{text-align:center;margin-bottom:16px}
+    .login-panel .row{align-items:stretch}
+    @media(max-width:560px){
+      .login-card{padding:25px 20px}
+      .login-actions{grid-template-columns:1fr}
+      .splash-title{font-size:28px}
+    }
+
     .hidden{display:none}
   </style>
 </head>
-<body>
+<body class="logged-out">
+  <div id="splashScreen" class="splash-screen">
+    <div class="splash-content">
+      <div class="splash-mark">📦</div>
+      <div class="splash-title">PIONEIRA</div>
+      <div class="splash-subtitle">Controle de Operações Logísticas</div>
+      <div class="splash-loader"></div>
+    </div>
+  </div>
+
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <div style="font-size:18px;font-weight:900">Sistema Estoque</div>
+        <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
         <span class="pill" id="ver">v1.0</span>
       </div>
       <div class="row">
@@ -123,51 +186,63 @@
 
       <div class="card main">
         <!-- LOGIN -->
-        <div id="loginBox" class="hidden">
-          <h2>🔐 Login</h2>
-          <p class="muted">Entre para acessar o painel (usuário/senha ficam salvos no navegador).</p>
-          <div class="row">
-            <div style="flex:1">
-              <label class="muted">Usuário</label>
-              <input id="lgUser" placeholder="ex: gabriel" />
-            </div>
-            <div style="flex:1">
-              <label class="muted">Senha</label>
-              <input id="lgPass" type="password" placeholder="••••••••" />
-            </div>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <button class="btn primary" id="btnLogin">Entrar</button>
-            <button class="btn" id="btnCreate">Criar conta</button>
-            <button class="btn" id="btnRecover">Recuperar senha</button>
-          </div>
+        <div id="loginBox" class="hidden login-shell">
+          <div class="login-card">
+            <div class="login-logo">📦</div>
+            <h1 class="login-title">SISTEMA PIONEIRA</h1>
+            <p class="login-subtitle">Controle de Operações Logísticas</p>
 
-          <div class="sep"></div>
+            <div class="login-field">
+              <label class="muted" for="lgUser">Usuário</label>
+              <input id="lgUser" autocomplete="username" placeholder="Digite seu usuário" />
+            </div>
 
-          <div id="createBox" class="hidden">
-            <h2>🧾 Criar conta</h2>
-            <div class="row">
-              <div style="flex:1"><label class="muted">Usuário</label><input id="crUser"></div>
-              <div style="flex:1"><label class="muted">Senha</label><input id="crPass" type="password"></div>
-              <div style="flex:1"><label class="muted">Email</label><input id="crEmail" type="email"></div>
+            <div class="login-field">
+              <label class="muted" for="lgPass">Senha</label>
+              <input id="lgPass" type="password" autocomplete="current-password" placeholder="Digite sua senha" />
             </div>
-            <div class="row" style="margin-top:10px">
-              <button class="btn good" id="btnDoCreate">Cadastrar</button>
-              <button class="btn" onclick="toggleBox('createBox', false)">Voltar</button>
-            </div>
-          </div>
 
-          <div id="recoverBox" class="hidden">
-            <h2>📨 Recuperar senha</h2>
-            <div style="max-width:420px">
-              <label class="muted">Usuário</label>
-              <input id="rcUser" placeholder="usuário cadastrado">
+            <button class="btn primary login-enter" id="btnLogin">Entrar</button>
+
+            <div class="login-actions">
+              <button class="btn" id="btnCreate">Criar conta</button>
+              <button class="btn" id="btnRecover">Recuperar senha</button>
             </div>
-            <div class="row" style="margin-top:10px">
-              <button class="btn primary" id="btnDoRecover">Enviar</button>
-              <button class="btn" onclick="toggleBox('recoverBox', false)">Voltar</button>
+
+            <div id="createBox" class="hidden login-panel">
+              <h2>🧾 Criar conta</h2>
+              <div class="login-field">
+                <label class="muted" for="crUser">Usuário</label>
+                <input id="crUser" autocomplete="username" placeholder="Escolha um usuário">
+              </div>
+              <div class="login-field">
+                <label class="muted" for="crPass">Senha</label>
+                <input id="crPass" type="password" autocomplete="new-password" placeholder="Escolha uma senha">
+              </div>
+              <div class="login-field">
+                <label class="muted" for="crEmail">E-mail</label>
+                <input id="crEmail" type="email" autocomplete="email" placeholder="seuemail@exemplo.com">
+              </div>
+              <div class="row" style="margin-top:14px">
+                <button class="btn good" id="btnDoCreate" style="flex:1">Cadastrar</button>
+                <button class="btn" style="flex:1" onclick="toggleBox('createBox', false)">Voltar</button>
+              </div>
             </div>
-            <p class="muted tiny">Obs: aqui só mostra a dica porque é tudo local.</p>
+
+            <div id="recoverBox" class="hidden login-panel">
+              <h2>📨 Recuperar senha</h2>
+              <div class="login-field">
+                <label class="muted" for="rcUser">Usuário</label>
+                <input id="rcUser" placeholder="Digite o usuário cadastrado">
+              </div>
+              <div class="row" style="margin-top:14px">
+                <button class="btn primary" id="btnDoRecover" style="flex:1">Consultar</button>
+                <button class="btn" style="flex:1" onclick="toggleBox('recoverBox', false)">Voltar</button>
+              </div>
+              <p class="muted tiny login-footer">Os dados de acesso ficam salvos somente neste navegador.</p>
+            </div>
+
+            <div class="muted tiny login-footer">Versão 1.0 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -457,13 +532,21 @@ function parseLines(text){
 
   function setupUI(){
     const u = LS("session");
+    document.body.classList.toggle("logged-out", !u);
+
     $("#userTag").textContent = u ? `👤 ${u}` : "Deslogado";
     $("#btnLogout").disabled = !u;
 
     $("#loginBox").classList.toggle("hidden", !!u);
     $("#views").classList.toggle("hidden", !u);
 
-    if(u){ refreshResumo(); montarCalendario(); }
+    if(u){
+      refreshResumo();
+      montarCalendario();
+    }else{
+      toggleBox("createBox", false);
+      toggleBox("recoverBox", false);
+    }
   }
 
   // ---------- Navigation ----------
@@ -1495,8 +1578,14 @@ if(exs){
     // Login UI
     $("#btnLogin").onclick = ()=> login($("#lgUser").value.trim(), $("#lgPass").value);
     $("#btnLogout").onclick = logout;
-    $("#btnCreate").onclick = ()=> toggleBox("createBox", true);
-    $("#btnRecover").onclick = ()=> toggleBox("recoverBox", true);
+    $("#btnCreate").onclick = ()=>{
+      toggleBox("recoverBox", false);
+      toggleBox("createBox", true);
+    };
+    $("#btnRecover").onclick = ()=>{
+      toggleBox("createBox", false);
+      toggleBox("recoverBox", true);
+    };
 
     $("#btnDoCreate").onclick = ()=>{
       const user = $("#crUser").value.trim();
@@ -1518,6 +1607,20 @@ if(exs){
       toast(`Conta encontrada. Email registrado: ${u.email || "(sem email)"} (senha não é enviada aqui).`);
       toggleBox("recoverBox", false);
     };
+
+    [$("#lgUser"), $("#lgPass")].forEach(campo =>{
+      campo.addEventListener("keydown", event =>{
+        if(event.key === "Enter") $("#btnLogin").click();
+      });
+    });
+
+    setTimeout(()=>{
+      const splash = $("#splashScreen");
+      if(splash){
+        splash.classList.add("hide");
+        setTimeout(()=> splash.remove(), 500);
+      }
+    }, 1500);
 
 limparBateuFuturo();
     const v = (location.hash||"#inicio").replace("#","");
