@@ -246,18 +246,21 @@
             <div id="tbReq"></div>
           </section>
 
-           <!-- REQUISIÇÃO -->
-         <section data-section="requisicaoConf">
-      <h2>📌 Requisições Conferência</h2>
-            <p class="muted">Cole vários pedidos que o sistema separa pelo número do pedido e importe.</p>
-            <textarea id="txReq" placeholder="Pedido;Cliente;Código;Item;Grade1;Grade2;Grade3;Qtd"></textarea>
-            <div class="row" style="margin-top:10px">
-              <button class="btn primary" onclick="importarTabela('req')">Importação</button>
-              <button class="btn" onclick="limparTabela('req')">Limpar</button>
-              <button class="btn" onclick="baixarTxt('req')">Baixar TXT</button>
-            </div>
-            <div id="tbReq"></div>
-          </section>
+          <!-- REQUISIÇÃO CONFERÊNCIA -->
+<section data-section="requisicaoConf" class="hidden">
+  <h2>📌 Requisições Conferência</h2>
+  <p class="muted">Cole vários pedidos que o sistema separa pelo número do pedido e importe.</p>
+
+  <textarea id="txReqConf" placeholder="Pedido;Cliente;Código;Item;Grade1;Grade2;Grade3;Qtd"></textarea>
+
+  <div class="row" style="margin-top:10px">
+    <button class="btn primary" onclick="importarTabela('reqConf')">Importação</button>
+    <button class="btn" onclick="limparTabela('reqConf')">Limpar</button>
+    <button class="btn" onclick="baixarTxt('reqConf')">Baixar TXT</button>
+  </div>
+
+  <div id="tbReqConf"></div>
+</section>
           
           <!-- ENTRADA x SAÍDA -->
           <section data-section="exs" class="hidden">
@@ -463,36 +466,100 @@ function parseLines(text){
     setView(v);
   });
 
-  // ---------- Data actions ----------
-  function importarTabela(kind){
-    const map = {
-      transfer: { tx:"#txTransfer", out:"#tbTransfer", headers:["Código","Descrição","Chave5","Chave6","Chave7","QTD1","QTD2","QTD3","Local","Destino"] },
-      zero:     { tx:"#txZero", out:"#tbZero", headers:["Código","Descrição","Chave5","Chave6","Chave7","QTD1","QTD2","QTD3","Local"] },
-      req:      { tx:"#txReq", out:"#tbReq", headers:["Pedido","Cliente","Código","Item","Chave5","Chave6","Chave7","Qtd"] },
-    };
-    const cfg = map[kind];
-    const rows = parseLines($(cfg.tx).value);
-    if(!rows.length){ toast("Nada para importar.", false); return; }
-    LSJ("tab_"+kind, rows);
-    $(cfg.out).innerHTML = renderTable(cfg.headers, rows);
-    toast("Importação concluída.");
+ // ---------- Data actions ----------
+function importarTabela(kind){
+
+  const map = {
+
+    transfer:{
+      tx:"#txTransfer",
+      out:"#tbTransfer",
+      headers:["Código","Descrição","Chave5","Chave6","Chave7","QTD1","QTD2","QTD3","Local","Destino"]
+    },
+
+    zero:{
+      tx:"#txZero",
+      out:"#tbZero",
+      headers:["Código","Descrição","Chave5","Chave6","Chave7","QTD1","QTD2","QTD3","Local"]
+    },
+
+    req:{
+      tx:"#txReq",
+      out:"#tbReq",
+      headers:["Pedido","Cliente","Código","Item","Chave5","Chave6","Chave7","Qtd"]
+    },
+
+    reqConf:{
+      tx:"#txReqConf",
+      out:"#tbReqConf",
+      headers:["Pedido","Cliente","Código","Item","Chave5","Chave6","Chave7","Qtd"]
+    }
+
+  };
+
+  const cfg = map[kind];
+
+  if(!cfg){
+    toast("Tipo de importação inválido.", false);
+    return;
   }
 
- function limparTabela(kind){
+  const rows = parseLines($(cfg.tx).value);
 
-  // limpa o texto colado
-  if(kind==="transfer") $("#txTransfer").value = "";
-  if(kind==="zero") $("#txZero").value = "";
-  if(kind==="req") $("#txReq").value = "";
+  if(!rows.length){
+    toast("Nada para importar.", false);
+    return;
+  }
 
-  // limpa dados da tabela
+  LSJ("tab_"+kind, rows);
+
+  $(cfg.out).innerHTML = renderTable(cfg.headers, rows);
+
+  toast("Importação concluída.");
+
+}
+
+function limparTabela(kind){
+
+  // Limpa o texto das caixas
+  if(kind==="transfer"){
+    $("#txTransfer").value = "";
+  }
+
+  if(kind==="zero"){
+    $("#txZero").value = "";
+  }
+
+  if(kind==="req"){
+    $("#txReq").value = "";
+  }
+
+  if(kind==="reqConf"){
+    $("#txReqConf").value = "";
+  }
+
+  // Limpa os dados salvos
   LSJ("tab_"+kind, []);
 
-  if(kind==="transfer") $("#tbTransfer").innerHTML="";
-  if(kind==="zero") $("#tbZero").innerHTML="";
-  if(kind==="req") $("#tbReq").innerHTML="";
+  // Limpa as tabelas
+  if(kind==="transfer"){
+    $("#tbTransfer").innerHTML = "";
+  }
+
+  if(kind==="zero"){
+    $("#tbZero").innerHTML = "";
+  }
+
+  if(kind==="req"){
+    $("#tbReq").innerHTML = "";
+  }
+
+  if(kind==="reqConf"){
+    $("#tbReqConf").innerHTML = "";
+  }
 
   toast("Texto e tabela limpos.");
+
 }
   
   // ===== Zeramento: aprende aos poucos (pergunta só o que não conhece) =====
@@ -569,75 +636,138 @@ function baixarTxt(kind){
   const yyyy = hoje.getFullYear();
   const data = `${dd}/${mm}/${yyyy}`;
 
-  // ===== REQUISIÇÃO (formato antigo) =====
-  if(kind === "req"){
-    const departamento = "27";
+// ===== REQUISIÇÕES SEPARAÇÃO E CONFERÊNCIA =====
+if(kind === "req" || kind === "reqConf"){
 
-    let requisitante = LS("req_requisitante");
+  // Separação = departamento 27
+  // Conferência = departamento 25
+  const departamento = kind === "req" ? "27" : "25";
+
+  const nomeTipo = kind === "req"
+    ? "SEPARACAO"
+    : "CONFERENCIA";
+
+  let requisitante = LS("req_requisitante");
+
+  if(!requisitante){
+    requisitante = prompt("Informe seu REQUISITANTE (ex: 26):");
+
     if(!requisitante){
-      requisitante = prompt("Informe seu REQUISITANTE (ex: 26):");
-      if(!requisitante){ toast("Requisitante não informado.", false); return; }
-      LS("req_requisitante", requisitante.trim());
-    }
-    requisitante = requisitante.trim();
-
-    const locais = LSJ("req_locais") || {};
-
-    const byPedido = new Map();
-    for(const r of rows){
-      const pedido = (r[0] || "").trim();
-      if(!pedido) continue;
-      if(!byPedido.has(pedido)) byPedido.set(pedido, []);
-      byPedido.get(pedido).push(r);
-    }
-    if(byPedido.size === 0){
-      toast("Nenhum pedido válido encontrado.", false);
+      toast("Requisitante não informado.", false);
       return;
     }
 
-    const out = [];
+    LS("req_requisitante", requisitante.trim());
+  }
 
-    for(const [pedido, linhas] of byPedido.entries()){
-      const cliente = (linhas[0][1] || "").trim();
+  requisitante = requisitante.trim();
 
-      out.push([
-        "R", data, "1", "1", requisitante, departamento,
-        `${pedido}  -  ${cliente}`,
-        pedido, "0", "0"
-      ].join("|"));
+  // Cada tela guarda seus próprios locais
+  const chaveLocais = kind === "req"
+    ? "req_locais"
+    : "reqConf_locais";
 
-      for(const r of linhas){
-        const codigo = (r[2] || "").trim();
-        const item   = (r[3] || "").trim();
-        const chave5 = (r[4] || "").trim();
-        const chave6 = (r[5] || "").trim();
-        const qtd    = (r[7] ?? r[6] ?? "").toString().trim();
+  const locais = LSJ(chaveLocais) || {};
 
-        if(!codigo || !qtd) continue;
+  // Agrupa as linhas pelo número do pedido
+  const byPedido = new Map();
 
-        let local = locais[codigo];
-        if(!local){
-          local = (prompt(`Local de saída do código ${codigo}:`) || "").trim();
-          if(local) locais[codigo] = local;
-        }
+  for(const r of rows){
+    const pedido = (r[0] || "").trim();
 
-        out.push(["I","P",codigo,item,chave5,chave6,qtd,"3",local].join("|"));
-      }
+    if(!pedido) continue;
+
+    if(!byPedido.has(pedido)){
+      byPedido.set(pedido, []);
     }
 
-    LSJ("req_locais", locais);
+    byPedido.get(pedido).push(r);
+  }
 
-    const txt = out.join("\r\n") + "\r\n";
-    const blob = new Blob([txt], {type:"text/plain;charset=utf-8"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `REQ_${data.replaceAll("/","-")}.txt`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-
-    toast(`TXT gerado com ${byPedido.size} pedido(s) no formato antigo.`);
+  if(byPedido.size === 0){
+    toast("Nenhum pedido válido encontrado.", false);
     return;
   }
+
+  const out = [];
+
+  for(const [pedido, linhas] of byPedido.entries()){
+
+    const cliente = (linhas[0][1] || "").trim();
+
+    // Cabeçalho da requisição
+    out.push([
+      "R",
+      data,
+      "1",
+      "1",
+      requisitante,
+      departamento,
+      `${pedido}  -  ${cliente}`,
+      pedido,
+      "0",
+      "0"
+    ].join("|"));
+
+    // Itens da requisição
+    for(const r of linhas){
+
+      const codigo = (r[2] || "").trim();
+      const item   = (r[3] || "").trim();
+      const chave5 = (r[4] || "").trim();
+      const chave6 = (r[5] || "").trim();
+      const qtd    = (r[7] ?? r[6] ?? "").toString().trim();
+
+      if(!codigo || !qtd) continue;
+
+      let local = locais[codigo];
+
+      if(!local){
+        local = (
+          prompt(`Local de saída do código ${codigo}:`) || ""
+        ).trim();
+
+        if(local){
+          locais[codigo] = local;
+        }
+      }
+
+      out.push([
+        "I",
+        "P",
+        codigo,
+        item,
+        chave5,
+        chave6,
+        qtd,
+        "3",
+        local
+      ].join("|"));
+    }
+  }
+
+  LSJ(chaveLocais, locais);
+
+  const txt = out.join("\r\n") + "\r\n";
+  const blob = new Blob(
+    [txt],
+    {type:"text/plain;charset=utf-8"}
+  );
+
+  const a = document.createElement("a");
+
+  a.href = URL.createObjectURL(blob);
+  a.download = `REQ_${nomeTipo}_${data.replaceAll("/","-")}.txt`;
+  a.click();
+
+  URL.revokeObjectURL(a.href);
+
+  toast(
+    `TXT de ${nomeTipo.toLowerCase()} gerado com ${byPedido.size} pedido(s). Departamento ${departamento}.`
+  );
+
+  return;
+}
 
   // ===== ZERAMENTO (formato M1/M3 | E/S | data | codigo | g1 | g2 | g3 | local | qtd | vl_unit | vl_total | 1905/5906) =====
   if (kind === "zero") {
