@@ -1461,7 +1461,7 @@ function limparBateuFuturo(){
 }
   
   // ---------- Init ----------
-  document.addEventListener("DOMContentLoaded", ()=>{
+$("#txManual").value = LS("manual")||"";
     // Puxar dados salvos
     $("#txManual").value = LS("manual")||"";
     const exs = LSJ("exs");
