@@ -151,6 +151,30 @@
     .qty-controls{display:flex;gap:6px;align-items:center}
     .qty-controls .btn{padding:5px 9px;border-radius:8px}
     @media(max-width:760px){.scan-grid{grid-template-columns:1fr}.scan-summary{grid-template-columns:1fr}}
+
+    .cp-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+    .cp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;margin-top:12px}
+    .cp-order-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:rgba(16,19,28,.62)}
+    .cp-order-card h3{margin:0 0 7px;font-size:16px}
+    .cp-order-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+    .cp-order-meta .meta{padding:9px;border:1px solid rgba(37,48,66,.7);border-radius:10px}
+    .cp-status{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:12px;border:1px solid var(--line)}
+    .cp-status.pending{color:#fde68a;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35)}
+    .cp-status.progress{color:#bfdbfe;background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.35)}
+    .cp-header{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px}
+    .cp-header .box{padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(16,19,28,.55)}
+    .cp-header .val{font-size:21px;font-weight:900;margin-top:5px}
+    .cp-table-wrap{overflow:auto;margin-top:14px}
+    .cp-table-wrap table{min-width:1180px}
+    .cp-row-ok{background:rgba(34,197,94,.14)}
+    .cp-row-partial{background:rgba(245,158,11,.12)}
+    .cp-row-over{background:rgba(239,68,68,.16)}
+    .cp-scan-box{margin-top:14px;padding:16px;border:1px solid rgba(124,58,237,.42);border-radius:16px;background:rgba(124,58,237,.08)}
+    .cp-scan-input{font-size:21px;padding:16px;text-align:center;letter-spacing:1px}
+    .cp-last{margin-top:10px;padding:11px;border:1px solid var(--line);border-radius:12px;background:rgba(16,19,28,.55)}
+    .cp-finished{margin-top:14px;padding:14px;border-radius:14px;border:1px solid rgba(34,197,94,.42);background:rgba(34,197,94,.12);color:#bbf7d0;font-weight:800;text-align:center}
+    @media(max-width:900px){.cp-header{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
     .hidden{display:none}
   </style>
 </head>
@@ -168,7 +192,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.5</span>
+        <span class="pill" id="ver">v2.7</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -190,6 +214,7 @@
           <a href="#zeramento" data-view="zeramento" data-permissao="zeramento">Zeramento <span class="muted">Editar</span></a>
 <a href="#requisicao" data-view="requisicao" data-permissao="separacao">Requisições Separação <span class="muted">›</span></a>
 <a href="#requisicaoConf" data-view="requisicaoConf" data-permissao="requisicao_conferencia">Requisições Conferência <span class="muted">›</span></a>
+          <a href="#conferenciaPedidos" data-view="conferenciaPedidos" data-permissao="conferencia_pedidos">✅ Conferência de Pedidos <span class="muted">›</span></a>
           <a href="#exs" data-view="exs" data-permissao="entrada_saida">⚖️ Entrada x Saída <span class="muted">›</span></a>
           <a href="#conferencia" data-view="conferencia" data-permissao="conferencia">Conferência <span class="muted">›</span></a>
           <a href="#producao" data-view="producao" data-permissao="conf_estoque">Conf. Estoque <span class="muted">Abrir</span></a>
@@ -242,7 +267,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.5 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 2.7 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -348,6 +373,54 @@
   <div id="tbReqConf" class="scan-table-wrap"></div>
 </section>
           
+
+          <!-- CONFERÊNCIA DE PEDIDOS -->
+          <section data-section="conferenciaPedidos" class="hidden">
+            <div id="cpListaView">
+              <h2>✅ Conferência de Pedidos</h2>
+              <p class="muted">Pedidos gerados exclusivamente pela aba Requisições Separação.</p>
+
+              <div class="cp-toolbar">
+                <button class="btn primary" id="btnCpAtualizar">Atualizar pedidos</button>
+                <span class="muted" id="cpListaStatus">Carregue os pedidos pendentes.</span>
+              </div>
+
+              <div id="cpPedidosLista" class="cp-list"></div>
+            </div>
+
+            <div id="cpDetalheView" class="hidden">
+              <div class="row" style="justify-content:space-between">
+                <div>
+                  <h2>📦 Conferência do Pedido</h2>
+                  <div class="muted" id="cpPedidoInfo">—</div>
+                </div>
+                <button class="btn" id="btnCpVoltar">← Voltar aos pedidos</button>
+              </div>
+
+              <div class="cp-header">
+                <div class="box"><div class="muted">Itens diferentes</div><div class="val" id="cpItensTotal">0</div></div>
+                <div class="box"><div class="muted">Esperado</div><div class="val" id="cpEsperado">0</div></div>
+                <div class="box"><div class="muted">Conferido</div><div class="val" id="cpConferido">0</div></div>
+                <div class="box"><div class="muted">Faltam</div><div class="val" id="cpFaltam">0</div></div>
+                <div class="box"><div class="muted">Excesso</div><div class="val" id="cpExcesso">0</div></div>
+              </div>
+
+              <div class="cp-scan-box">
+                <label class="muted" for="cpBarcode">Código de barras</label>
+                <input id="cpBarcode" class="cp-scan-input" inputmode="numeric" autocomplete="off" placeholder="Bipe o produto — leitura automática">
+                <div id="cpUltimaLeitura" class="cp-last muted">Aguardando a primeira leitura.</div>
+              </div>
+
+              <div class="row" style="margin-top:12px">
+                <button class="btn" id="btnCpDesfazer">Desfazer última leitura</button>
+                <button class="btn good" id="btnCpFinalizar" disabled>Finalizar Conferência</button>
+              </div>
+
+              <div id="cpMensagemFinal" class="cp-finished hidden">✅ REQUISIÇÃO CONFERIDA COM SUCESSO</div>
+              <div id="cpTabela" class="cp-table-wrap"></div>
+            </div>
+          </section>
+
           <!-- ENTRADA x SAÍDA -->
           <section data-section="exs" class="hidden">
             <h2>⚖️ Entrada x Saída</h2>
@@ -558,14 +631,14 @@ function parseLines(text){
   const permissoesPadraoPorPerfil = {
     administrador: [
       "inicio","transferencia","zeramento","separacao",
-      "requisicao_conferencia","entrada_saida","conferencia",
+      "requisicao_conferencia","conferencia_pedidos","entrada_saida","conferencia",
       "conf_estoque","produtos","admin"
     ],
     producao: ["inicio","requisicao_conferencia"],
     separacao: ["inicio","separacao"],
-    conferencia: ["inicio","conferencia"],
+    conferencia: ["inicio","conferencia_pedidos","conferencia"],
     estoque: [
-      "inicio","transferencia","zeramento","separacao",
+      "inicio","transferencia","zeramento","separacao","conferencia_pedidos",
       "entrada_saida","conferencia","conf_estoque"
     ],
     consulta: ["inicio"]
@@ -1712,10 +1785,397 @@ function limparProducao(){
 
 
 
+
+// ---------- Conferência de Pedidos ----------
+let cpPedidosCache = [];
+let cpPedidoAtual = null;
+let cpItensMap = new Map();
+let cpHistorico = [];
+let cpTimer = null;
+let cpProcessando = false;
+let cpProdutosCache = null;
+
+function cpNorm(valor){
+  return String(valor ?? "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"");
+}
+
+function cpChave(codigo,g1,g2,g3){
+  return [codigo,g1,g2,g3].map(cpNorm).join("|");
+}
+
+function cpStatusTexto(status){
+  if(status === "em_conferencia") return "Em conferência";
+  return "Aguardando conferência";
+}
+
+function cpFocarLeitor(){
+  const campo = $("#cpBarcode");
+  if(campo && !campo.disabled){
+    setTimeout(()=>campo.focus(),60);
+  }
+}
+
+async function cpCarregarProdutos(){
+  if(cpProdutosCache) return cpProdutosCache;
+  if(!window.firebaseListarProdutos) return [];
+
+  cpProdutosCache = await window.firebaseListarProdutos();
+  return cpProdutosCache;
+}
+
+function cpLocalizarProdutoPedido(item, produtos){
+  const codigo = cpNorm(item.codigo);
+  const g1 = cpNorm(item.grade1);
+  const g2 = cpNorm(item.grade2);
+  const g3 = cpNorm(item.grade3);
+
+  return produtos.find(produto=>{
+    return cpNorm(produto.codigo) === codigo
+      && cpNorm(converterGradeTxt(produto.grade1)) === g1
+      && cpNorm(converterGradeTxt(produto.grade2)) === g2
+      && cpNorm(converterGradeTxt(produto.grade3)) === g3;
+  }) || produtos.find(produto=>
+    cpNorm(produto.codigo) === codigo
+    && cpNorm(produto.grade3) === g3
+  ) || null;
+}
+
+async function carregarPedidosConferencia(){
+  const lista = $("#cpPedidosLista");
+  const status = $("#cpListaStatus");
+
+  lista.innerHTML = "";
+  status.textContent = "Carregando pedidos...";
+
+  try{
+    if(!window.firebaseListarPedidosConferencia){
+      throw new Error("Módulo do Firebase ainda está carregando.");
+    }
+
+    cpPedidosCache = await window.firebaseListarPedidosConferencia();
+
+    status.textContent = `${cpPedidosCache.length} pedido(s) aguardando ou em conferência.`;
+
+    if(!cpPedidosCache.length){
+      lista.innerHTML = `<div class="muted">Nenhum pedido pendente encontrado.</div>`;
+      return;
+    }
+
+    lista.innerHTML = cpPedidosCache.map(pedido=>{
+      const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
+      const esperado = itens.reduce((s,item)=>s + Number(item.quantidadeEsperada || 0),0);
+      const classe = pedido.status === "em_conferencia" ? "progress" : "pending";
+
+      return `<div class="cp-order-card">
+        <div class="row" style="justify-content:space-between;align-items:flex-start">
+          <h3>${escapeHtml(pedido.pedido || "Sem número")}</h3>
+          <span class="cp-status ${classe}">${cpStatusTexto(pedido.status)}</span>
+        </div>
+        <div class="muted">${escapeHtml(pedido.cliente || "Cliente não informado")}</div>
+        <div class="cp-order-meta">
+          <div class="meta"><div class="muted">Itens</div><strong>${itens.length}</strong></div>
+          <div class="meta"><div class="muted">Peças</div><strong>${esperado}</strong></div>
+        </div>
+        <button class="btn primary" style="width:100%" onclick="abrirPedidoConferencia('${pedido.id}')">Abrir Conferência</button>
+      </div>`;
+    }).join("");
+  }catch(error){
+    console.error(error);
+    status.textContent = "Erro ao carregar pedidos.";
+    lista.innerHTML = `<div class="bad">Não foi possível consultar os pedidos no Firebase.</div>`;
+  }
+}
+
+async function abrirPedidoConferencia(id){
+  const pedido = cpPedidosCache.find(item=>item.id===id);
+
+  if(!pedido){
+    toast("Pedido não encontrado.",false);
+    return;
+  }
+
+  cpPedidoAtual = pedido;
+  cpItensMap.clear();
+  cpHistorico = [];
+
+  try{
+    const produtos = await cpCarregarProdutos();
+    const itensOriginais = Array.isArray(pedido.itens) ? pedido.itens : [];
+
+    for(const item of itensOriginais){
+      const produto = cpLocalizarProdutoPedido(item,produtos);
+      const g1Completa = produto?.grade1 || item.grade1 || "";
+      const g2Completa = produto?.grade2 || item.grade2 || "";
+      const g3Completa = produto?.grade3 || item.grade3 || "";
+      const chave = cpChave(
+        item.codigo,
+        converterGradeTxt(g1Completa),
+        converterGradeTxt(g2Completa),
+        converterGradeTxt(g3Completa)
+      );
+
+      const registro = {
+        chave,
+        codigo: String(item.codigo || ""),
+        descricao: String(produto?.produto || item.descricao || "Produto não encontrado no cadastro"),
+        grade1: String(g1Completa),
+        grade2: String(g2Completa),
+        grade3: String(g3Completa),
+        quantidadeEsperada: Number(item.quantidadeEsperada || 0),
+        quantidadeConferida: Number(item.quantidadeConferida || 0)
+      };
+
+      if(cpItensMap.has(chave)){
+        const existente = cpItensMap.get(chave);
+        existente.quantidadeEsperada += registro.quantidadeEsperada;
+        existente.quantidadeConferida += registro.quantidadeConferida;
+      }else{
+        cpItensMap.set(chave,registro);
+      }
+    }
+
+    $("#cpListaView").classList.add("hidden");
+    $("#cpDetalheView").classList.remove("hidden");
+    $("#cpPedidoInfo").textContent = `${pedido.pedido} — ${pedido.cliente || ""}`;
+    $("#cpUltimaLeitura").textContent = "Aguardando a primeira leitura.";
+    $("#cpMensagemFinal").classList.add("hidden");
+
+    renderizarConferenciaPedido();
+    await window.firebaseIniciarConferenciaPedido?.(pedido.id);
+    cpPedidoAtual.status = "em_conferencia";
+    cpFocarLeitor();
+  }catch(error){
+    console.error(error);
+    toast("Não foi possível abrir o pedido.",false);
+  }
+}
+
+function renderizarConferenciaPedido(){
+  const itens = Array.from(cpItensMap.values());
+  const esperado = itens.reduce((s,item)=>s+item.quantidadeEsperada,0);
+  const conferido = itens.reduce((s,item)=>s+item.quantidadeConferida,0);
+  const faltam = itens.reduce((s,item)=>s+Math.max(0,item.quantidadeEsperada-item.quantidadeConferida),0);
+  const excesso = itens.reduce((s,item)=>s+Math.max(0,item.quantidadeConferida-item.quantidadeEsperada),0);
+  const completo = itens.length>0 && itens.every(item=>item.quantidadeConferida===item.quantidadeEsperada);
+
+  $("#cpItensTotal").textContent = itens.length;
+  $("#cpEsperado").textContent = esperado;
+  $("#cpConferido").textContent = conferido;
+  $("#cpFaltam").textContent = faltam;
+  $("#cpExcesso").textContent = excesso;
+  $("#btnCpFinalizar").disabled = !completo;
+
+  if(completo){
+    $("#cpMensagemFinal").classList.remove("hidden");
+  }else{
+    $("#cpMensagemFinal").classList.add("hidden");
+  }
+
+  if(!itens.length){
+    $("#cpTabela").innerHTML = `<div class="muted">Este pedido não possui itens válidos.</div>`;
+    return;
+  }
+
+  let html = `<table><thead><tr>
+    <th>Código</th>
+    <th>Descrição</th>
+    <th>Grade 1</th>
+    <th>Grade 2</th>
+    <th>Grade 3</th>
+    <th>Esperado</th>
+    <th>Conferido</th>
+    <th>Status</th>
+  </tr></thead><tbody>`;
+
+  for(const item of itens){
+    let classe = "";
+    let status = "⚪ Não iniciado";
+
+    if(item.quantidadeConferida > item.quantidadeEsperada){
+      classe = "cp-row-over";
+      status = "🔴 Excesso";
+    }else if(item.quantidadeConferida === item.quantidadeEsperada && item.quantidadeEsperada > 0){
+      classe = "cp-row-ok";
+      status = "🟢 Conferido";
+    }else if(item.quantidadeConferida > 0){
+      classe = "cp-row-partial";
+      status = "🟡 Parcial";
+    }
+
+    html += `<tr class="${classe}">
+      <td>${escapeHtml(item.codigo)}</td>
+      <td>${escapeHtml(item.descricao)}</td>
+      <td>${escapeHtml(item.grade1)}</td>
+      <td>${escapeHtml(item.grade2)}</td>
+      <td>${escapeHtml(item.grade3)}</td>
+      <td><strong>${item.quantidadeEsperada}</strong></td>
+      <td><strong>${item.quantidadeConferida}</strong></td>
+      <td>${status}</td>
+    </tr>`;
+  }
+
+  html += `</tbody></table>`;
+  $("#cpTabela").innerHTML = html;
+}
+
+async function processarCodigoConferenciaPedido(codigo){
+  if(cpProcessando || !cpPedidoAtual) return;
+
+  const barra = String(codigo || "").trim();
+  if(!barra) return;
+
+  cpProcessando = true;
+  const campo = $("#cpBarcode");
+  campo.disabled = true;
+
+  try{
+    const resultado = await window.firebaseBuscarProdutoPorBarra(barra);
+
+    if(!resultado){
+      $("#cpUltimaLeitura").innerHTML = `<span class="bad">Código não cadastrado: ${escapeHtml(barra)}</span>`;
+      toast("Código de barras não encontrado.",false);
+      return;
+    }
+
+    const produto = resultado.produto;
+    const quantidade = Number(resultado.quantidade || 1);
+    const chave = cpChave(
+      produto.codigo,
+      converterGradeTxt(produto.grade1),
+      converterGradeTxt(produto.grade2),
+      converterGradeTxt(produto.grade3)
+    );
+
+    const item = cpItensMap.get(chave);
+
+    if(!item){
+      $("#cpUltimaLeitura").innerHTML =
+        `<span class="bad">Produto não pertence a este pedido.</span><br>` +
+        `${escapeHtml(produto.codigo)} — ${escapeHtml(produto.produto)} • ` +
+        `${escapeHtml(produto.grade1)} • ${escapeHtml(produto.grade2)} • ${escapeHtml(produto.grade3)}`;
+      toast("Produto não pertence ao pedido.",false);
+      return;
+    }
+
+    item.quantidadeConferida += quantidade;
+    cpItensMap.set(chave,item);
+    cpHistorico.push({chave,quantidade});
+
+    $("#cpUltimaLeitura").innerHTML =
+      `<span class="ok">✓ ${escapeHtml(produto.codigo)} — ${escapeHtml(produto.produto)}</span><br>` +
+      `${escapeHtml(produto.grade1)} • ${escapeHtml(produto.grade2)} • ${escapeHtml(produto.grade3)} | +${quantidade}`;
+
+    renderizarConferenciaPedido();
+    await salvarProgressoConferenciaPedido();
+  }catch(error){
+    console.error(error);
+    toast("Erro ao processar a leitura.",false);
+  }finally{
+    campo.value = "";
+    campo.disabled = false;
+    cpProcessando = false;
+    cpFocarLeitor();
+  }
+}
+
+async function salvarProgressoConferenciaPedido(){
+  if(!cpPedidoAtual || !window.firebaseSalvarProgressoConferencia) return;
+
+  const itens = Array.from(cpItensMap.values()).map(item=>({
+    codigo:item.codigo,
+    descricao:item.descricao,
+    grade1:item.grade1,
+    grade2:item.grade2,
+    grade3:item.grade3,
+    quantidadeEsperada:item.quantidadeEsperada,
+    quantidadeConferida:item.quantidadeConferida
+  }));
+
+  await window.firebaseSalvarProgressoConferencia(cpPedidoAtual.id,itens);
+}
+
+async function desfazerLeituraConferenciaPedido(){
+  const ultima = cpHistorico.pop();
+
+  if(!ultima){
+    toast("Nenhuma leitura para desfazer.",false);
+    cpFocarLeitor();
+    return;
+  }
+
+  const item = cpItensMap.get(ultima.chave);
+
+  if(item){
+    item.quantidadeConferida = Math.max(0,item.quantidadeConferida-ultima.quantidade);
+    cpItensMap.set(ultima.chave,item);
+    renderizarConferenciaPedido();
+    await salvarProgressoConferenciaPedido();
+  }
+
+  $("#cpUltimaLeitura").textContent = "Última leitura desfeita.";
+  cpFocarLeitor();
+}
+
+async function finalizarConferenciaPedido(){
+  if(!cpPedidoAtual) return;
+
+  const itens = Array.from(cpItensMap.values());
+  const completo = itens.length>0 && itens.every(item=>item.quantidadeConferida===item.quantidadeEsperada);
+
+  if(!completo){
+    toast("Ainda existem itens pendentes ou com excesso.",false);
+    return;
+  }
+
+  const btn = $("#btnCpFinalizar");
+  btn.disabled = true;
+  btn.textContent = "Finalizando...";
+
+  try{
+    await window.firebaseFinalizarConferenciaPedido(cpPedidoAtual.id,itens);
+    toast("Conferência finalizada com sucesso.");
+    $("#cpMensagemFinal").classList.remove("hidden");
+    setTimeout(voltarListaConferenciaPedidos,900);
+  }catch(error){
+    console.error(error);
+    toast("Não foi possível finalizar a conferência.",false);
+    btn.disabled = false;
+  }finally{
+    btn.textContent = "Finalizar Conferência";
+  }
+}
+
+function voltarListaConferenciaPedidos(){
+  cpPedidoAtual = null;
+  cpItensMap.clear();
+  cpHistorico = [];
+  $("#cpDetalheView").classList.add("hidden");
+  $("#cpListaView").classList.remove("hidden");
+  carregarPedidosConferencia();
+}
+
 // ---------- Finalização da Requisição Separação ----------
 function montarPedidosSeparacaoFirebase(){
   const rows = LSJ("tab_req") || [];
   const agrupados = new Map();
+
+  function numero(valor){
+    const n = Number(String(valor ?? "0").trim().replace(/\./g,"").replace(",","."));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function chaveItem(item){
+    return [
+      item.codigo,
+      item.grade1,
+      item.grade2,
+      item.grade3
+    ].map(v=>String(v||"").trim().toUpperCase()).join("|");
+  }
 
   for(const r of rows){
     const pedido = String(r[0] || "").trim();
@@ -1723,6 +2183,23 @@ function montarPedidosSeparacaoFirebase(){
     const codigo = String(r[2] || "").trim();
 
     if(!pedido || !codigo) continue;
+
+    // Relatório correto:
+    // Pedido | Cliente | Código | Grade1 | Grade2 | Grade3 | Quantidade
+    let grade1, grade2, grade3, quantidade;
+
+    if(r.length === 7){
+      grade1 = String(r[3] || "").trim();
+      grade2 = String(r[4] || "").trim();
+      grade3 = String(r[5] || "").trim();
+      quantidade = numero(r[6]);
+    }else{
+      // Compatibilidade com o formato antigo de 8 colunas.
+      grade1 = String(r[4] || "").trim();
+      grade2 = String(r[5] || "").trim();
+      grade3 = String(r[6] || "").trim();
+      quantidade = numero(r[7] ?? r[6]);
+    }
 
     if(!agrupados.has(pedido)){
       agrupados.set(pedido, {
@@ -1732,29 +2209,38 @@ function montarPedidosSeparacaoFirebase(){
         tipo: "requisicao_separacao",
         origem: "requisicoes_separacao",
         status: "aguardando_conferencia",
-        itens: []
+        itensMap: new Map()
       });
     }
 
-    const quantidadeTexto = String(r[7] ?? r[6] ?? "0")
-      .trim()
-      .replace(/\./g, "")
-      .replace(",", ".");
-
-    const quantidade = Number(quantidadeTexto) || 0;
-
-    agrupados.get(pedido).itens.push({
+    const item = {
       codigo,
-      item: String(r[3] || "").trim(),
-      grade1: String(r[4] || "").trim(),
-      grade2: String(r[5] || "").trim(),
-      grade3: String(r[6] || "").trim(),
+      grade1,
+      grade2,
+      grade3,
       quantidadeEsperada: quantidade,
       quantidadeConferida: 0
-    });
+    };
+
+    const grupo = agrupados.get(pedido);
+    const chave = chaveItem(item);
+
+    if(grupo.itensMap.has(chave)){
+      grupo.itensMap.get(chave).quantidadeEsperada += quantidade;
+    }else{
+      grupo.itensMap.set(chave, item);
+    }
   }
 
-  return Array.from(agrupados.values());
+  return Array.from(agrupados.values()).map(grupo=>({
+    pedido: grupo.pedido,
+    cliente: grupo.cliente,
+    departamento: grupo.departamento,
+    tipo: grupo.tipo,
+    origem: grupo.origem,
+    status: grupo.status,
+    itens: Array.from(grupo.itensMap.values())
+  }));
 }
 
 async function finalizarRequisicaoSeparacao(){
@@ -2137,6 +2623,32 @@ if(exs){
     };
 
 
+
+    $("#btnCpAtualizar").onclick = carregarPedidosConferencia;
+    $("#btnCpVoltar").onclick = voltarListaConferenciaPedidos;
+    $("#btnCpDesfazer").onclick = desfazerLeituraConferenciaPedido;
+    $("#btnCpFinalizar").onclick = finalizarConferenciaPedido;
+
+    $("#cpBarcode").addEventListener("input",event=>{
+      clearTimeout(cpTimer);
+      const valor = event.currentTarget.value.trim();
+      if(!valor) return;
+      cpTimer = setTimeout(()=>processarCodigoConferenciaPedido(valor),180);
+    });
+
+    $("#cpBarcode").addEventListener("keydown",event=>{
+      if(event.key==="Enter"){
+        event.preventDefault();
+        clearTimeout(cpTimer);
+        processarCodigoConferenciaPedido(event.currentTarget.value);
+      }
+    });
+
+    const linkConferenciaPedidos = $('#nav a[data-view="conferenciaPedidos"]');
+    if(linkConferenciaPedidos){
+      linkConferenciaPedidos.addEventListener("click",()=>setTimeout(carregarPedidosConferencia,80));
+    }
+
     $("#btnFinalizarReqSeparacao").onclick = finalizarRequisicaoSeparacao;
 
     $("#reqConfBarcode").addEventListener("input",event=>{clearTimeout(reqConfTimerLeitura);const valor=event.currentTarget.value.trim();if(!valor)return;reqConfTimerLeitura=setTimeout(()=>processarCodigoReqConf(valor),180);});
@@ -2207,7 +2719,8 @@ montarCalendario();
     getDocs,
     writeBatch,
     serverTimestamp,
-    addDoc
+    addDoc,
+    updateDoc
   } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -2320,6 +2833,55 @@ montarCalendario();
     return { produto, tipo: barra.tipo || "unidade", quantidade: Number(barra.quantidade || 1) };
   };
 
+
+
+  window.firebaseListarPedidosConferencia = async () => {
+    const snapshot = await getDocs(collection(db,"pedidos"));
+
+    return snapshot.docs
+      .map(documento=>({id:documento.id,...documento.data()}))
+      .filter(pedido=>
+        pedido.origem === "requisicoes_separacao"
+        && ["aguardando_conferencia","em_conferencia"].includes(pedido.status)
+      )
+      .sort((a,b)=>{
+        const ta = a.criadoEm?.seconds || 0;
+        const tb = b.criadoEm?.seconds || 0;
+        return ta-tb;
+      });
+  };
+
+  window.firebaseIniciarConferenciaPedido = async (pedidoId) => {
+    const referencia = doc(db,"pedidos",pedidoId);
+    await updateDoc(referencia,{
+      status:"em_conferencia",
+      conferenciaIniciadaEm:serverTimestamp(),
+      conferidoPorUid:auth.currentUser ? auth.currentUser.uid : null,
+      conferidoPorEmail:auth.currentUser ? auth.currentUser.email : null,
+      atualizadoEm:serverTimestamp()
+    });
+  };
+
+  window.firebaseSalvarProgressoConferencia = async (pedidoId,itens) => {
+    const referencia = doc(db,"pedidos",pedidoId);
+    await updateDoc(referencia,{
+      status:"em_conferencia",
+      itens,
+      atualizadoEm:serverTimestamp()
+    });
+  };
+
+  window.firebaseFinalizarConferenciaPedido = async (pedidoId,itens) => {
+    const referencia = doc(db,"pedidos",pedidoId);
+    await updateDoc(referencia,{
+      status:"conferido",
+      itens,
+      conferenciaFinalizadaEm:serverTimestamp(),
+      conferidoPorUid:auth.currentUser ? auth.currentUser.uid : null,
+      conferidoPorEmail:auth.currentUser ? auth.currentUser.email : null,
+      atualizadoEm:serverTimestamp()
+    });
+  };
 
   window.firebaseSalvarPedidosSeparacao = async (pedidos) => {
     let salvos = 0;
