@@ -175,6 +175,15 @@
     .cp-finished{margin-top:14px;padding:14px;border-radius:14px;border:1px solid rgba(34,197,94,.42);background:rgba(34,197,94,.12);color:#bbf7d0;font-weight:800;text-align:center}
     @media(max-width:900px){.cp-header{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+
+    .cp-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    .cp-tabs .btn.active{background:linear-gradient(135deg,var(--accent),#4c1d95);border-color:transparent}
+    .cp-search{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:12px 0}
+    .cp-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .cp-actions .btn{padding:6px 9px;border-radius:8px}
+    .cp-readonly{opacity:.95}
+    @media(max-width:760px){.cp-search{grid-template-columns:1fr}}
+
     .hidden{display:none}
   </style>
 </head>
@@ -192,7 +201,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.7</span>
+        <span class="pill" id="ver">v2.8</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -267,7 +276,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.7 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 2.8 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -380,12 +389,28 @@
               <h2>✅ Conferência de Pedidos</h2>
               <p class="muted">Pedidos gerados exclusivamente pela aba Requisições Separação.</p>
 
-              <div class="cp-toolbar">
-                <button class="btn primary" id="btnCpAtualizar">Atualizar pedidos</button>
-                <span class="muted" id="cpListaStatus">Carregue os pedidos pendentes.</span>
+              <div class="cp-tabs">
+                <button class="btn active" id="btnCpPendentes">Pendentes</button>
+                <button class="btn" id="btnCpHistorico">Histórico de Conferências</button>
               </div>
 
-              <div id="cpPedidosLista" class="cp-list"></div>
+              <div id="cpPainelPendentes">
+                <div class="cp-toolbar">
+                  <button class="btn primary" id="btnCpAtualizar">Atualizar pedidos</button>
+                  <span class="muted" id="cpListaStatus">Carregue os pedidos pendentes.</span>
+                </div>
+                <div id="cpPedidosLista" class="cp-list"></div>
+              </div>
+
+              <div id="cpPainelHistorico" class="hidden">
+                <div class="cp-search">
+                  <input id="cpBuscaHistorico" placeholder="Pesquisar por pedido ou cliente">
+                  <input id="cpDataHistorico" type="date">
+                  <button class="btn primary" id="btnCpBuscarHistorico">Pesquisar</button>
+                </div>
+                <div class="muted" id="cpHistoricoStatus">Pesquise os pedidos conferidos.</div>
+                <div id="cpHistoricoLista" class="cp-list"></div>
+              </div>
             </div>
 
             <div id="cpDetalheView" class="hidden">
@@ -394,7 +419,10 @@
                   <h2>📦 Conferência do Pedido</h2>
                   <div class="muted" id="cpPedidoInfo">—</div>
                 </div>
-                <button class="btn" id="btnCpVoltar">← Voltar aos pedidos</button>
+                <div class="row">
+                  <button class="btn" id="btnCpRomaneio">Gerar Romaneio</button>
+                  <button class="btn" id="btnCpVoltar">← Voltar aos pedidos</button>
+                </div>
               </div>
 
               <div class="cp-header">
@@ -405,13 +433,13 @@
                 <div class="box"><div class="muted">Excesso</div><div class="val" id="cpExcesso">0</div></div>
               </div>
 
-              <div class="cp-scan-box">
+              <div id="cpScanArea" class="cp-scan-box">
                 <label class="muted" for="cpBarcode">Código de barras</label>
                 <input id="cpBarcode" class="cp-scan-input" inputmode="numeric" autocomplete="off" placeholder="Bipe o produto — leitura automática">
                 <div id="cpUltimaLeitura" class="cp-last muted">Aguardando a primeira leitura.</div>
               </div>
 
-              <div class="row" style="margin-top:12px">
+              <div id="cpAcoesConferencia" class="row" style="margin-top:12px">
                 <button class="btn" id="btnCpDesfazer">Desfazer última leitura</button>
                 <button class="btn good" id="btnCpFinalizar" disabled>Finalizar Conferência</button>
               </div>
@@ -1794,6 +1822,8 @@ let cpHistorico = [];
 let cpTimer = null;
 let cpProcessando = false;
 let cpProdutosCache = null;
+let cpModoHistorico = false;
+let cpHistoricoCache = [];
 
 function cpNorm(valor){
   return String(valor ?? "")
@@ -1898,6 +1928,7 @@ async function abrirPedidoConferencia(id){
     return;
   }
 
+  cpModoHistorico = false;
   cpPedidoAtual = pedido;
   cpItensMap.clear();
   cpHistorico = [];
@@ -1940,6 +1971,8 @@ async function abrirPedidoConferencia(id){
 
     $("#cpListaView").classList.add("hidden");
     $("#cpDetalheView").classList.remove("hidden");
+    $("#cpScanArea").classList.remove("hidden");
+    $("#cpAcoesConferencia").classList.remove("hidden");
     $("#cpPedidoInfo").textContent = `${pedido.pedido} — ${pedido.cliente || ""}`;
     $("#cpUltimaLeitura").textContent = "Aguardando a primeira leitura.";
     $("#cpMensagemFinal").classList.add("hidden");
@@ -1989,6 +2022,7 @@ function renderizarConferenciaPedido(){
     <th>Esperado</th>
     <th>Conferido</th>
     <th>Status</th>
+    <th>Ajuste</th>
   </tr></thead><tbody>`;
 
   for(const item of itens){
@@ -2015,6 +2049,12 @@ function renderizarConferenciaPedido(){
       <td><strong>${item.quantidadeEsperada}</strong></td>
       <td><strong>${item.quantidadeConferida}</strong></td>
       <td>${status}</td>
+      <td>
+        ${cpModoHistorico ? "—" : `<div class="cp-actions">
+          <button class="btn" onclick="ajustarItemConferencia('${item.chave}',-1)">−1</button>
+          <button class="btn" onclick="ajustarItemConferencia('${item.chave}',1)">+1</button>
+        </div>`}
+      </td>
     </tr>`;
   }
 
@@ -2080,6 +2120,253 @@ async function processarCodigoConferenciaPedido(codigo){
     cpProcessando = false;
     cpFocarLeitor();
   }
+}
+
+
+async function ajustarItemConferencia(chave,delta){
+  if(cpModoHistorico || !cpPedidoAtual) return;
+
+  const item = cpItensMap.get(chave);
+  if(!item) return;
+
+  const novaQuantidade = Math.max(0,item.quantidadeConferida + delta);
+  const alteracaoReal = novaQuantidade - item.quantidadeConferida;
+
+  if(alteracaoReal === 0){
+    cpFocarLeitor();
+    return;
+  }
+
+  let motivo = "Ajuste manual durante a conferência";
+  if(alteracaoReal < 0){
+    motivo = prompt("Motivo da retirada física:", "Produto retirado do palhete") || "Produto retirado do palhete";
+  }
+
+  item.quantidadeConferida = novaQuantidade;
+  cpItensMap.set(chave,item);
+
+  renderizarConferenciaPedido();
+  await salvarProgressoConferenciaPedido();
+
+  if(window.firebaseRegistrarAjusteConferencia){
+    await window.firebaseRegistrarAjusteConferencia(cpPedidoAtual.id,{
+      codigo:item.codigo,
+      descricao:item.descricao,
+      grade1:item.grade1,
+      grade2:item.grade2,
+      grade3:item.grade3,
+      alteracao:alteracaoReal,
+      quantidadeAposAjuste:item.quantidadeConferida,
+      motivo
+    });
+  }
+
+  $("#cpUltimaLeitura").textContent =
+    `Ajuste manual: ${item.codigo} ${alteracaoReal>0?"+":""}${alteracaoReal}.`;
+
+  cpFocarLeitor();
+}
+
+function abrirAbaCp(tipo){
+  const historico = tipo === "historico";
+
+  $("#btnCpPendentes").classList.toggle("active",!historico);
+  $("#btnCpHistorico").classList.toggle("active",historico);
+  $("#cpPainelPendentes").classList.toggle("hidden",historico);
+  $("#cpPainelHistorico").classList.toggle("hidden",!historico);
+
+  if(historico){
+    carregarHistoricoConferencias();
+  }else{
+    carregarPedidosConferencia();
+  }
+}
+
+async function carregarHistoricoConferencias(){
+  const busca = $("#cpBuscaHistorico").value.trim().toLowerCase();
+  const data = $("#cpDataHistorico").value;
+  const status = $("#cpHistoricoStatus");
+  const lista = $("#cpHistoricoLista");
+
+  status.textContent = "Carregando histórico...";
+  lista.innerHTML = "";
+
+  try{
+    cpHistoricoCache = await window.firebaseListarHistoricoConferencias();
+
+    const filtrados = cpHistoricoCache.filter(pedido=>{
+      const texto = `${pedido.pedido||""} ${pedido.cliente||""}`.toLowerCase();
+      const bateTexto = !busca || texto.includes(busca);
+
+      let bateData = true;
+      if(data){
+        const timestamp = pedido.conferenciaFinalizadaEm?.seconds;
+        if(timestamp){
+          const d = new Date(timestamp*1000);
+          const chave = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+          bateData = chave === data;
+        }else{
+          bateData = false;
+        }
+      }
+
+      return bateTexto && bateData;
+    });
+
+    status.textContent = `${filtrados.length} pedido(s) encontrado(s).`;
+
+    if(!filtrados.length){
+      lista.innerHTML = `<div class="muted">Nenhuma conferência encontrada.</div>`;
+      return;
+    }
+
+    lista.innerHTML = filtrados.map(pedido=>{
+      const itens = Array.isArray(pedido.itens)?pedido.itens:[];
+      const esperado = itens.reduce((s,i)=>s+Number(i.quantidadeEsperada||0),0);
+      const dataFim = pedido.conferenciaFinalizadaEm?.seconds
+        ? new Date(pedido.conferenciaFinalizadaEm.seconds*1000).toLocaleString("pt-BR")
+        : "Sem data";
+
+      return `<div class="cp-order-card">
+        <div class="row" style="justify-content:space-between">
+          <h3>${escapeHtml(pedido.pedido||"Sem número")}</h3>
+          <span class="cp-status progress">Conferido</span>
+        </div>
+        <div class="muted">${escapeHtml(pedido.cliente||"")}</div>
+        <div class="cp-order-meta">
+          <div class="meta"><div class="muted">Peças</div><strong>${esperado}</strong></div>
+          <div class="meta"><div class="muted">Finalizado</div><strong>${escapeHtml(dataFim)}</strong></div>
+        </div>
+        <button class="btn primary" style="width:100%" onclick="abrirHistoricoConferencia('${pedido.id}')">Consultar</button>
+      </div>`;
+    }).join("");
+  }catch(error){
+    console.error(error);
+    status.textContent = "Erro ao carregar histórico.";
+  }
+}
+
+async function abrirHistoricoConferencia(id){
+  const pedido = cpHistoricoCache.find(p=>p.id===id);
+  if(!pedido) return;
+
+  cpModoHistorico = true;
+  cpPedidoAtual = pedido;
+  cpItensMap.clear();
+
+  const itens = Array.isArray(pedido.itens)?pedido.itens:[];
+
+  for(const item of itens){
+    const chave = cpChave(item.codigo,item.grade1,item.grade2,item.grade3);
+    cpItensMap.set(chave,{
+      chave,
+      codigo:String(item.codigo||""),
+      descricao:String(item.descricao||""),
+      grade1:String(item.grade1||""),
+      grade2:String(item.grade2||""),
+      grade3:String(item.grade3||""),
+      quantidadeEsperada:Number(item.quantidadeEsperada||0),
+      quantidadeConferida:Number(item.quantidadeConferida||0)
+    });
+  }
+
+  $("#cpListaView").classList.add("hidden");
+  $("#cpDetalheView").classList.remove("hidden");
+  $("#cpPedidoInfo").textContent = `${pedido.pedido} — ${pedido.cliente||""}`;
+  $("#cpScanArea").classList.add("hidden");
+  $("#cpAcoesConferencia").classList.add("hidden");
+  $("#cpMensagemFinal").classList.remove("hidden");
+
+  renderizarConferenciaPedido();
+}
+
+function gerarRomaneioConferencia(){
+  if(!cpPedidoAtual) return;
+
+  const itens = Array.from(cpItensMap.values());
+  const dataFim = cpPedidoAtual.conferenciaFinalizadaEm?.seconds
+    ? new Date(cpPedidoAtual.conferenciaFinalizadaEm.seconds*1000).toLocaleString("pt-BR")
+    : new Date().toLocaleString("pt-BR");
+
+  const conferente = cpPedidoAtual.conferidoPorEmail
+    || usuarioFirebaseAtual?.email
+    || "Não informado";
+
+  const linhas = itens.map(item=>{
+    const ok = item.quantidadeEsperada===item.quantidadeConferida ? "OK" : "DIVERGENTE";
+    return `<tr>
+      <td>${escapeHtml(item.codigo)}</td>
+      <td>${escapeHtml(item.descricao)}</td>
+      <td>${escapeHtml(item.grade1)}</td>
+      <td>${escapeHtml(item.grade2)}</td>
+      <td>${escapeHtml(item.grade3)}</td>
+      <td>${item.quantidadeEsperada}</td>
+      <td>${item.quantidadeConferida}</td>
+      <td>${ok}</td>
+    </tr>`;
+  }).join("");
+
+  const totalEsperado = itens.reduce((s,i)=>s+i.quantidadeEsperada,0);
+  const totalConferido = itens.reduce((s,i)=>s+i.quantidadeConferida,0);
+
+  const janela = window.open("","_blank");
+  janela.document.write(`<!doctype html>
+  <html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Romaneio de Conferência</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#111;padding:28px}
+      h1{margin:0 0 5px;font-size:22px}
+      .sub{color:#555;margin-bottom:22px}
+      .dados{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+      .dados div{border:1px solid #ccc;padding:8px}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th,td{border:1px solid #bbb;padding:6px;text-align:left}
+      th{background:#eee}
+      .totais{margin-top:15px;font-weight:bold}
+      .assinatura{margin-top:55px;display:grid;grid-template-columns:1fr 1fr;gap:60px}
+      .linha{border-top:1px solid #111;text-align:center;padding-top:5px}
+      @media print{button{display:none}}
+    </style>
+  </head>
+  <body>
+    <h1>PIONEIRA — ROMANEIO DE CONFERÊNCIA</h1>
+    <div class="sub">Controle de Operações Logísticas</div>
+
+    <div class="dados">
+      <div><strong>Pedido:</strong> ${escapeHtml(cpPedidoAtual.pedido||"")}</div>
+      <div><strong>Cliente:</strong> ${escapeHtml(cpPedidoAtual.cliente||"")}</div>
+      <div><strong>Conferente:</strong> ${escapeHtml(conferente)}</div>
+      <div><strong>Finalizado em:</strong> ${escapeHtml(dataFim)}</div>
+    </div>
+
+    <table>
+      <thead><tr>
+        <th>Código</th><th>Descrição</th><th>Grade 1</th><th>Grade 2</th><th>Grade 3</th>
+        <th>Esperado</th><th>Conferido</th><th>Status</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+
+    <div class="totais">
+      Total esperado: ${totalEsperado} &nbsp;&nbsp;|&nbsp;&nbsp;
+      Total conferido: ${totalConferido}
+    </div>
+
+    <div class="assinatura">
+      <div class="linha">Conferente</div>
+      <div class="linha">Garantia / Responsável</div>
+    </div>
+
+    <p style="margin-top:35px;font-size:10px;color:#555">
+      Documento gerado pelo Sistema Pioneira como evidência da conferência do pedido.
+    </p>
+
+    <button onclick="window.print()">Imprimir / Salvar em PDF</button>
+  </body>
+  </html>`);
+  janela.document.close();
 }
 
 async function salvarProgressoConferenciaPedido(){
@@ -2150,6 +2437,7 @@ async function finalizarConferenciaPedido(){
 }
 
 function voltarListaConferenciaPedidos(){
+  cpModoHistorico = false;
   cpPedidoAtual = null;
   cpItensMap.clear();
   cpHistorico = [];
@@ -2624,6 +2912,10 @@ if(exs){
 
 
 
+    $("#btnCpPendentes").onclick = ()=>abrirAbaCp("pendentes");
+    $("#btnCpHistorico").onclick = ()=>abrirAbaCp("historico");
+    $("#btnCpBuscarHistorico").onclick = carregarHistoricoConferencias;
+    $("#btnCpRomaneio").onclick = gerarRomaneioConferencia;
     $("#btnCpAtualizar").onclick = carregarPedidosConferencia;
     $("#btnCpVoltar").onclick = voltarListaConferenciaPedidos;
     $("#btnCpDesfazer").onclick = desfazerLeituraConferenciaPedido;
@@ -2720,7 +3012,8 @@ montarCalendario();
     writeBatch,
     serverTimestamp,
     addDoc,
-    updateDoc
+    updateDoc,
+    arrayUnion
   } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -2834,6 +3127,37 @@ montarCalendario();
   };
 
 
+
+
+  window.firebaseListarHistoricoConferencias = async () => {
+    const snapshot = await getDocs(collection(db,"pedidos"));
+
+    return snapshot.docs
+      .map(documento=>({id:documento.id,...documento.data()}))
+      .filter(pedido=>
+        pedido.origem === "requisicoes_separacao"
+        && pedido.status === "conferido"
+      )
+      .sort((a,b)=>{
+        const ta = a.conferenciaFinalizadaEm?.seconds || 0;
+        const tb = b.conferenciaFinalizadaEm?.seconds || 0;
+        return tb-ta;
+      });
+  };
+
+  window.firebaseRegistrarAjusteConferencia = async (pedidoId,ajuste) => {
+    const referencia = doc(db,"pedidos",pedidoId);
+
+    await updateDoc(referencia,{
+      ajustes:arrayUnion({
+        ...ajuste,
+        usuarioUid:auth.currentUser ? auth.currentUser.uid : null,
+        usuarioEmail:auth.currentUser ? auth.currentUser.email : null,
+        registradoEm:new Date().toISOString()
+      }),
+      atualizadoEm:serverTimestamp()
+    });
+  };
 
   window.firebaseListarPedidosConferencia = async () => {
     const snapshot = await getDocs(collection(db,"pedidos"));
