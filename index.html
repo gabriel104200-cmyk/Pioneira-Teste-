@@ -139,6 +139,18 @@
     .produto-table-wrap table{min-width:1100px}
     @media(max-width:760px){.produto-grid{grid-template-columns:1fr}}
 
+    .scan-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .scan-box{margin-top:14px;padding:16px;border:1px solid rgba(124,58,237,.42);border-radius:16px;background:rgba(124,58,237,.08)}
+    .scan-input{font-size:20px;padding:16px 18px;text-align:center;letter-spacing:1px}
+    .scan-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+    .scan-summary .box{padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(16,19,28,.55)}
+    .scan-summary .val{font-size:22px;font-weight:900;margin-top:5px}
+    .scan-last{margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(16,19,28,.55)}
+    .scan-table-wrap{overflow:auto;margin-top:14px}
+    .scan-table-wrap table{min-width:980px}
+    .qty-controls{display:flex;gap:6px;align-items:center}
+    .qty-controls .btn{padding:5px 9px;border-radius:8px}
+    @media(max-width:760px){.scan-grid{grid-template-columns:1fr}.scan-summary{grid-template-columns:1fr}}
     .hidden{display:none}
   </style>
 </head>
@@ -156,7 +168,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.1</span>
+        <span class="pill" id="ver">v2.2</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -230,7 +242,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.1 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 2.2 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -311,18 +323,29 @@
 
           <!-- REQUISIÇÃO CONFERÊNCIA -->
 <section data-section="requisicaoConf" class="hidden">
-  <h2>📌 Requisições Conferência</h2>
-  <p class="muted">Cole vários pedidos que o sistema separa pelo número do pedido e importe.</p>
-
-  <textarea id="txReqConf" placeholder="Pedido;Cliente;Código;Item;Grade1;Grade2;Grade3;Qtd"></textarea>
-
-  <div class="row" style="margin-top:10px">
-    <button class="btn primary" onclick="importarTabela('reqConf')">Importação</button>
-    <button class="btn" onclick="limparTabela('reqConf')">Limpar</button>
-    <button class="btn" onclick="baixarTxt('reqConf')">Baixar TXT</button>
+  <h2>📲 Requisição Conferência por Código de Barras</h2>
+  <p class="muted">Informe o pedido/palhete e a identificação. Depois, use o leitor para bipar unidades ou caixas.</p>
+  <div class="scan-grid">
+    <div><label class="muted" for="reqConfPedido">Pedido / Palhete</label><input id="reqConfPedido" placeholder="Ex.: PALHETE 01 ou 0726-000123"></div>
+    <div><label class="muted" for="reqConfCliente">Cliente / Identificação</label><input id="reqConfCliente" placeholder="Ex.: MAC, 1 ou nome do pedido"></div>
   </div>
-
-  <div id="tbReqConf"></div>
+  <div class="scan-box">
+    <label class="muted" for="reqConfBarcode">Código de barras</label>
+    <input id="reqConfBarcode" class="scan-input" inputmode="numeric" autocomplete="off" placeholder="Bipe o código e pressione Enter">
+    <div id="reqConfLast" class="scan-last muted">Aguardando a primeira leitura.</div>
+  </div>
+  <div class="scan-summary">
+    <div class="box"><div class="muted">Itens diferentes</div><div class="val" id="reqConfItens">0</div></div>
+    <div class="box"><div class="muted">Quantidade total</div><div class="val" id="reqConfTotal">0</div></div>
+    <div class="box"><div class="muted">Último acréscimo</div><div class="val" id="reqConfUltimo">0</div></div>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button class="btn good" id="btnReqConfFinalizar">Salvar pedido</button>
+    <button class="btn primary" id="btnReqConfTxt">Gerar TXT</button>
+    <button class="btn" id="btnReqConfDesfazer">Desfazer última leitura</button>
+    <button class="btn warn" id="btnReqConfLimpar">Limpar pedido</button>
+  </div>
+  <div id="tbReqConf" class="scan-table-wrap"></div>
 </section>
           
           <!-- ENTRADA x SAÍDA -->
@@ -1688,6 +1711,24 @@ function limparProducao(){
 }
 
 
+// ---------- Requisição Conferência por bipagem ----------
+let reqConfItensMap = new Map();
+let reqConfHistorico = [];
+let reqConfLeituraEmAndamento = false;
+const conversoesTxt = {masculino:"M",feminino:"F",preto:"PRE",branco:"BRA",amarelo:"AMA",azul:"AZU",verde:"VER",vermelho:"VERM",rosa:"ROS",cinza:"CIN",laranja:"LAR"};
+function converterGradeTxt(valor){const original=String(valor??"").trim();if(!original)return "";const chave=original.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");return conversoesTxt[chave]||original.toUpperCase();}
+function focarLeitorReqConf(){const campo=$("#reqConfBarcode");if(campo&&!campo.disabled)setTimeout(()=>campo.focus(),40);}
+function atualizarResumoReqConf(ultimo=0){const itens=Array.from(reqConfItensMap.values());const total=itens.reduce((s,i)=>s+Number(i.quantidade||0),0);$("#reqConfItens").textContent=itens.length;$("#reqConfTotal").textContent=total;$("#reqConfUltimo").textContent=ultimo;renderizarReqConf();}
+function renderizarReqConf(){const itens=Array.from(reqConfItensMap.values());if(!itens.length){$("#tbReqConf").innerHTML='<div class="muted" style="margin-top:14px">Nenhum produto bipado.</div>';return;}let html='<table><thead><tr><th>Código</th><th>Produto</th><th>Grade 1</th><th>Grade 2</th><th>Grade 3</th><th>Quantidade</th><th>Ações</th></tr></thead><tbody>';for(const item of itens){html+=`<tr><td>${escapeHtml(item.codigo)}</td><td>${escapeHtml(item.produto)}</td><td>${escapeHtml(item.grade1)}</td><td>${escapeHtml(item.grade2)}</td><td>${escapeHtml(item.grade3)}</td><td><strong>${item.quantidade}</strong></td><td><div class="qty-controls"><button class="btn" onclick="ajustarQtdReqConf('${item.produtoId}',-1)">−1</button><button class="btn" onclick="ajustarQtdReqConf('${item.produtoId}',1)">+1</button><button class="btn warn" onclick="removerItemReqConf('${item.produtoId}')">Excluir</button></div></td></tr>`;}html+='</tbody></table>';$("#tbReqConf").innerHTML=html;}
+function ajustarQtdReqConf(id,delta){const item=reqConfItensMap.get(id);if(!item)return;item.quantidade+=delta;if(item.quantidade<=0)reqConfItensMap.delete(id);else reqConfItensMap.set(id,item);atualizarResumoReqConf(delta);focarLeitorReqConf();}
+function removerItemReqConf(id){reqConfItensMap.delete(id);atualizarResumoReqConf(0);focarLeitorReqConf();}
+async function processarCodigoReqConf(codigo){if(reqConfLeituraEmAndamento)return;const barra=String(codigo||"").trim();if(!barra)return;reqConfLeituraEmAndamento=true;const campo=$("#reqConfBarcode");campo.disabled=true;try{if(!window.firebaseBuscarProdutoPorBarra)throw new Error("Módulo ainda carregando.");const resultado=await window.firebaseBuscarProdutoPorBarra(barra);if(!resultado){$("#reqConfLast").innerHTML=`<span class="bad">Código não cadastrado: ${escapeHtml(barra)}</span>`;toast("Código de barras não encontrado.",false);return;}const {produto,tipo,quantidade}=resultado;const acrescimo=Number(quantidade||1);const existente=reqConfItensMap.get(produto.id);if(existente){existente.quantidade+=acrescimo;reqConfItensMap.set(produto.id,existente);}else{reqConfItensMap.set(produto.id,{produtoId:produto.id,codigo:String(produto.codigo||""),produto:String(produto.produto||""),grade1:String(produto.grade1||""),grade2:String(produto.grade2||""),grade3:String(produto.grade3||""),quantidade:acrescimo});}reqConfHistorico.push({produtoId:produto.id,quantidade:acrescimo,codigoBarra:barra});$("#reqConfLast").innerHTML=`<span class="ok">✓ ${escapeHtml(produto.codigo)} — ${escapeHtml(produto.produto)}</span><br>${escapeHtml(produto.grade1)} • ${escapeHtml(produto.grade2)} • ${escapeHtml(produto.grade3)} | ${tipo==="caixa"?"Caixa":"Unidade"}: +${acrescimo}`;atualizarResumoReqConf(acrescimo);}catch(error){console.error(error);$("#reqConfLast").innerHTML=`<span class="bad">${escapeHtml(error.message||"Erro na leitura.")}</span>`;toast("Não foi possível processar o código.",false);}finally{campo.value="";campo.disabled=false;reqConfLeituraEmAndamento=false;focarLeitorReqConf();}}
+function desfazerUltimaLeituraReqConf(){const ultima=reqConfHistorico.pop();if(!ultima){toast("Nenhuma leitura para desfazer.",false);return focarLeitorReqConf();}const item=reqConfItensMap.get(ultima.produtoId);if(item){item.quantidade-=ultima.quantidade;if(item.quantidade<=0)reqConfItensMap.delete(ultima.produtoId);else reqConfItensMap.set(ultima.produtoId,item);}$("#reqConfLast").textContent="Última leitura desfeita.";atualizarResumoReqConf(-ultima.quantidade);focarLeitorReqConf();}
+function limparReqConf(confirmar=true){if(confirmar&&reqConfItensMap.size&&!confirm("Limpar todos os itens deste pedido?"))return;reqConfItensMap.clear();reqConfHistorico=[];$("#reqConfPedido").value="";$("#reqConfCliente").value="";$("#reqConfBarcode").value="";$("#reqConfLast").textContent="Aguardando a primeira leitura.";atualizarResumoReqConf(0);focarLeitorReqConf();}
+function montarLinhasReqConf(){const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();if(!pedido||!cliente){toast("Preencha Pedido/Palhete e Cliente/Identificação.",false);return null;}const itens=Array.from(reqConfItensMap.values());if(!itens.length){toast("Bipe ao menos um produto.",false);return null;}return itens.map((item,indice)=>[pedido,cliente,item.codigo,String(indice+1),converterGradeTxt(item.grade1),converterGradeTxt(item.grade2),converterGradeTxt(item.grade3),String(item.quantidade)]);}
+function gerarTxtReqConfBipagem(){const linhas=montarLinhasReqConf();if(!linhas)return;LSJ("tab_reqConf",linhas);baixarTxt("reqConf");focarLeitorReqConf();}
+async function salvarPedidoReqConf(){const linhas=montarLinhasReqConf();if(!linhas)return;if(!window.firebaseSalvarPedidoConferencia){toast("Módulo de pedidos ainda carregando.",false);return;}const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();const itens=Array.from(reqConfItensMap.values()).map(i=>({codigo:i.codigo,produto:i.produto,grade1:i.grade1,grade2:i.grade2,grade3:i.grade3,quantidade:i.quantidade}));const btn=$("#btnReqConfFinalizar");btn.disabled=true;btn.textContent="Salvando...";try{const id=await window.firebaseSalvarPedidoConferencia({pedido,cliente,departamento:"25",tipo:"requisicao_conferencia",status:"finalizado",itens});toast(`Pedido salvo com sucesso. Registro: ${id}`);LSJ("tab_reqConf",linhas);}catch(e){console.error(e);toast("Não foi possível salvar o pedido.",false);}finally{btn.disabled=false;btn.textContent="Salvar pedido";focarLeitorReqConf();}}
+
 // ---------- Produtos Firebase ----------
 let produtosPreview = [];
 
@@ -1914,6 +1955,14 @@ if(exs){
     };
 
 
+    $("#reqConfBarcode").addEventListener("keydown", event=>{if(event.key==="Enter"){event.preventDefault();processarCodigoReqConf(event.currentTarget.value);}});
+    $("#btnReqConfFinalizar").onclick=salvarPedidoReqConf;
+    $("#btnReqConfTxt").onclick=gerarTxtReqConfBipagem;
+    $("#btnReqConfDesfazer").onclick=desfazerUltimaLeituraReqConf;
+    $("#btnReqConfLimpar").onclick=()=>limparReqConf(true);
+    const linkReqConf=$("#nav a[data-view='requisicaoConf']");if(linkReqConf)linkReqConf.addEventListener("click",()=>setTimeout(focarLeitorReqConf,80));
+    atualizarResumoReqConf(0);
+
     $("#btnPreviewProdutos").onclick = visualizarProdutos;
     $("#btnImportarProdutos").onclick = importarProdutosFirebase;
     $("#btnLimparProdutos").onclick = ()=>{
@@ -1972,7 +2021,8 @@ montarCalendario();
     collection,
     getDocs,
     writeBatch,
-    serverTimestamp
+    serverTimestamp,
+    addDoc
   } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -2069,6 +2119,29 @@ montarCalendario();
   window.firebaseListarProdutos = async () => {
     const snapshot = await getDocs(collection(db, "produtos"));
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  };
+
+  window.firebaseBuscarProdutoPorBarra = async (codigoBarra) => {
+    const barraRef = doc(db, "codigos_barras", String(codigoBarra));
+    const barraSnap = await getDoc(barraRef);
+    if(!barraSnap.exists()) return null;
+    const barra = barraSnap.data();
+    if(barra.ativo === false) return null;
+    const produtoRef = doc(db, "produtos", barra.produtoId);
+    const produtoSnap = await getDoc(produtoRef);
+    if(!produtoSnap.exists()) return null;
+    const produto = { id: produtoSnap.id, ...produtoSnap.data() };
+    if(produto.ativo === false) return null;
+    return { produto, tipo: barra.tipo || "unidade", quantidade: Number(barra.quantidade || 1) };
+  };
+
+  window.firebaseSalvarPedidoConferencia = async (dados) => {
+    const referencia = await addDoc(collection(db, "pedidos"), {
+      ...dados, criadoEm: serverTimestamp(),
+      criadoPorUid: auth.currentUser ? auth.currentUser.uid : null,
+      criadoPorEmail: auth.currentUser ? auth.currentUser.email : null
+    });
+    return referencia.id;
   };
 
   onAuthStateChanged(auth, (user) => {
