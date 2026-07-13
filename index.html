@@ -168,7 +168,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.2</span>
+        <span class="pill" id="ver">v2.3</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -242,7 +242,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.2 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 2.3 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -331,7 +331,7 @@
   </div>
   <div class="scan-box">
     <label class="muted" for="reqConfBarcode">Código de barras</label>
-    <input id="reqConfBarcode" class="scan-input" inputmode="numeric" autocomplete="off" placeholder="Bipe o código e pressione Enter">
+    <input id="reqConfBarcode" class="scan-input" inputmode="numeric" autocomplete="off" placeholder="Bipe o código — a leitura será automática">
     <div id="reqConfLast" class="scan-last muted">Aguardando a primeira leitura.</div>
   </div>
   <div class="scan-summary">
@@ -1714,7 +1714,7 @@ function limparProducao(){
 // ---------- Requisição Conferência por bipagem ----------
 let reqConfItensMap = new Map();
 let reqConfHistorico = [];
-let reqConfLeituraEmAndamento = false;
+let reqConfLeituraEmAndamento = false;let reqConfTimerLeitura=null;
 const conversoesTxt = {masculino:"M",feminino:"F",preto:"PRE",branco:"BRA",amarelo:"AMA",azul:"AZU",verde:"VER",vermelho:"VERM",rosa:"ROS",cinza:"CIN",laranja:"LAR"};
 function converterGradeTxt(valor){const original=String(valor??"").trim();if(!original)return "";const chave=original.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");return conversoesTxt[chave]||original.toUpperCase();}
 function focarLeitorReqConf(){const campo=$("#reqConfBarcode");if(campo&&!campo.disabled)setTimeout(()=>campo.focus(),40);}
@@ -1726,7 +1726,67 @@ async function processarCodigoReqConf(codigo){if(reqConfLeituraEmAndamento)retur
 function desfazerUltimaLeituraReqConf(){const ultima=reqConfHistorico.pop();if(!ultima){toast("Nenhuma leitura para desfazer.",false);return focarLeitorReqConf();}const item=reqConfItensMap.get(ultima.produtoId);if(item){item.quantidade-=ultima.quantidade;if(item.quantidade<=0)reqConfItensMap.delete(ultima.produtoId);else reqConfItensMap.set(ultima.produtoId,item);}$("#reqConfLast").textContent="Última leitura desfeita.";atualizarResumoReqConf(-ultima.quantidade);focarLeitorReqConf();}
 function limparReqConf(confirmar=true){if(confirmar&&reqConfItensMap.size&&!confirm("Limpar todos os itens deste pedido?"))return;reqConfItensMap.clear();reqConfHistorico=[];$("#reqConfPedido").value="";$("#reqConfCliente").value="";$("#reqConfBarcode").value="";$("#reqConfLast").textContent="Aguardando a primeira leitura.";atualizarResumoReqConf(0);focarLeitorReqConf();}
 function montarLinhasReqConf(){const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();if(!pedido||!cliente){toast("Preencha Pedido/Palhete e Cliente/Identificação.",false);return null;}const itens=Array.from(reqConfItensMap.values());if(!itens.length){toast("Bipe ao menos um produto.",false);return null;}return itens.map((item,indice)=>[pedido,cliente,item.codigo,String(indice+1),converterGradeTxt(item.grade1),converterGradeTxt(item.grade2),converterGradeTxt(item.grade3),String(item.quantidade)]);}
-function gerarTxtReqConfBipagem(){const linhas=montarLinhasReqConf();if(!linhas)return;LSJ("tab_reqConf",linhas);baixarTxt("reqConf");focarLeitorReqConf();}
+function gerarTxtReqConfBipagem(){
+  const linhas=montarLinhasReqConf();
+  if(!linhas)return;
+
+  const local=(prompt("Informe o LOCAL DE RETIRADA desta requisição de conferência:")||"").trim();
+  if(!local){
+    toast("Local de retirada não informado.",false);
+    focarLeitorReqConf();
+    return;
+  }
+
+  const pedido=$("#reqConfPedido").value.trim();
+  const cliente=$("#reqConfCliente").value.trim();
+
+  let requisitante=LS("req_requisitante");
+  if(!requisitante){
+    requisitante=(prompt("Informe seu REQUISITANTE (ex.: 26):")||"").trim();
+    if(!requisitante){
+      toast("Requisitante não informado.",false);
+      focarLeitorReqConf();
+      return;
+    }
+    LS("req_requisitante",requisitante);
+  }
+
+  const hoje=new Date();
+  const dd=String(hoje.getDate()).padStart(2,"0");
+  const mm=String(hoje.getMonth()+1).padStart(2,"0");
+  const yyyy=hoje.getFullYear();
+  const data=`${dd}/${mm}/${yyyy}`;
+
+  const out=[];
+  out.push([
+    "R",data,"1","1",requisitante.trim(),"25",
+    `${pedido}  -  ${cliente}`,pedido,"0","0"
+  ].join("|"));
+
+  for(const r of linhas){
+    const codigo=String(r[2]||"").trim();
+    const item=String(r[3]||"").trim();
+    const grade1=String(r[4]||"").trim();
+    const grade2=String(r[5]||"").trim();
+    const quantidade=String(r[7]||"").trim();
+    if(!codigo||!quantidade)continue;
+
+    out.push([
+      "I","P",codigo,item,grade1,grade2,quantidade,"3",local
+    ].join("|"));
+  }
+
+  const txt=out.join("\r\n")+"\r\n";
+  const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`REQ_CONFERENCIA_${data.replaceAll("/","-")}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  toast(`TXT gerado com local de retirada ${local}.`);
+  focarLeitorReqConf();
+}
 async function salvarPedidoReqConf(){const linhas=montarLinhasReqConf();if(!linhas)return;if(!window.firebaseSalvarPedidoConferencia){toast("Módulo de pedidos ainda carregando.",false);return;}const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();const itens=Array.from(reqConfItensMap.values()).map(i=>({codigo:i.codigo,produto:i.produto,grade1:i.grade1,grade2:i.grade2,grade3:i.grade3,quantidade:i.quantidade}));const btn=$("#btnReqConfFinalizar");btn.disabled=true;btn.textContent="Salvando...";try{const id=await window.firebaseSalvarPedidoConferencia({pedido,cliente,departamento:"25",tipo:"requisicao_conferencia",status:"finalizado",itens});toast(`Pedido salvo com sucesso. Registro: ${id}`);LSJ("tab_reqConf",linhas);}catch(e){console.error(e);toast("Não foi possível salvar o pedido.",false);}finally{btn.disabled=false;btn.textContent="Salvar pedido";focarLeitorReqConf();}}
 
 // ---------- Produtos Firebase ----------
@@ -1955,7 +2015,8 @@ if(exs){
     };
 
 
-    $("#reqConfBarcode").addEventListener("keydown", event=>{if(event.key==="Enter"){event.preventDefault();processarCodigoReqConf(event.currentTarget.value);}});
+    $("#reqConfBarcode").addEventListener("input",event=>{clearTimeout(reqConfTimerLeitura);const valor=event.currentTarget.value.trim();if(!valor)return;reqConfTimerLeitura=setTimeout(()=>processarCodigoReqConf(valor),180);});
+    $("#reqConfBarcode").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();clearTimeout(reqConfTimerLeitura);processarCodigoReqConf(event.currentTarget.value);}});
     $("#btnReqConfFinalizar").onclick=salvarPedidoReqConf;
     $("#btnReqConfTxt").onclick=gerarTxtReqConfBipagem;
     $("#btnReqConfDesfazer").onclick=desfazerUltimaLeituraReqConf;
