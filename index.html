@@ -168,7 +168,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.4.1</span>
+        <span class="pill" id="ver">v2.5</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -242,7 +242,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.4.1 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 2.5 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -315,8 +315,8 @@
             <textarea id="txReq" placeholder="Pedido;Cliente;Código;Item;Grade1;Grade2;Grade3;Qtd"></textarea>
             <div class="row" style="margin-top:10px">
               <button class="btn primary" onclick="importarTabela('req')">Importação</button>
+              <button class="btn good" id="btnFinalizarReqSeparacao">Finalizar Requisição</button>
               <button class="btn" onclick="limparTabela('req')">Limpar</button>
-              <button class="btn" onclick="baixarTxt('req')">Baixar TXT</button>
             </div>
             <div id="tbReq"></div>
           </section>
@@ -889,7 +889,7 @@ function limparTabela(kind){
   
 function baixarTxt(kind){
   const rows = LSJ("tab_"+kind) || [];
-  if(!rows.length){ toast("Nada para baixar.", false); return; }
+  if(!rows.length){ toast("Nada para baixar.", false); return false; }
 
   // helpers (disponível para todos os tipos)
   function toNumberBR(x){
@@ -926,7 +926,7 @@ if(kind === "req" || kind === "reqConf"){
 
     if(!requisitante){
       toast("Requisitante não informado.", false);
-      return;
+      return false;
     }
 
     LS("req_requisitante", requisitante.trim());
@@ -958,7 +958,7 @@ if(kind === "req" || kind === "reqConf"){
 
   if(byPedido.size === 0){
     toast("Nenhum pedido válido encontrado.", false);
-    return;
+    return false;
   }
 
   const out = [];
@@ -1038,7 +1038,7 @@ if(kind === "req" || kind === "reqConf"){
     `TXT de ${nomeTipo.toLowerCase()} gerado com ${byPedido.size} pedido(s). Departamento ${departamento}.`
   );
 
-  return;
+  return true;
 }
 
   // ===== ZERAMENTO (formato M1/M3 | E/S | data | codigo | g1 | g2 | g3 | local | qtd | vl_unit | vl_total | 1905/5906) =====
@@ -1711,6 +1711,94 @@ function limparProducao(){
 }
 
 
+
+// ---------- Finalização da Requisição Separação ----------
+function montarPedidosSeparacaoFirebase(){
+  const rows = LSJ("tab_req") || [];
+  const agrupados = new Map();
+
+  for(const r of rows){
+    const pedido = String(r[0] || "").trim();
+    const cliente = String(r[1] || "").trim();
+    const codigo = String(r[2] || "").trim();
+
+    if(!pedido || !codigo) continue;
+
+    if(!agrupados.has(pedido)){
+      agrupados.set(pedido, {
+        pedido,
+        cliente,
+        departamento: "27",
+        tipo: "requisicao_separacao",
+        origem: "requisicoes_separacao",
+        status: "aguardando_conferencia",
+        itens: []
+      });
+    }
+
+    const quantidadeTexto = String(r[7] ?? r[6] ?? "0")
+      .trim()
+      .replace(/\./g, "")
+      .replace(",", ".");
+
+    const quantidade = Number(quantidadeTexto) || 0;
+
+    agrupados.get(pedido).itens.push({
+      codigo,
+      item: String(r[3] || "").trim(),
+      grade1: String(r[4] || "").trim(),
+      grade2: String(r[5] || "").trim(),
+      grade3: String(r[6] || "").trim(),
+      quantidadeEsperada: quantidade,
+      quantidadeConferida: 0
+    });
+  }
+
+  return Array.from(agrupados.values());
+}
+
+async function finalizarRequisicaoSeparacao(){
+  const pedidos = montarPedidosSeparacaoFirebase();
+
+  if(!pedidos.length){
+    toast("Importe os pedidos antes de finalizar.", false);
+    return;
+  }
+
+  if(!window.firebaseSalvarPedidosSeparacao){
+    toast("Módulo do Firebase ainda está carregando.", false);
+    return;
+  }
+
+  const btn = $("#btnFinalizarReqSeparacao");
+  btn.disabled = true;
+  btn.textContent = "Finalizando...";
+
+  try{
+    // Primeiro gera o TXT e solicita os locais normalmente.
+    const txtGerado = baixarTxt("req");
+
+    if(txtGerado !== true){
+      return;
+    }
+
+    const resultado = await window.firebaseSalvarPedidosSeparacao(pedidos);
+
+    toast(
+      `${resultado} pedido(s) salvo(s) para a Conferência de Pedidos.`
+    );
+  }catch(error){
+    console.error(error);
+    toast(
+      "O TXT foi gerado, mas não foi possível salvar os pedidos no Firebase.",
+      false
+    );
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Finalizar Requisição";
+  }
+}
+
 // ---------- Requisição Conferência por bipagem ----------
 let reqConfItensMap = new Map();
 let reqConfHistorico = [];
@@ -2049,6 +2137,8 @@ if(exs){
     };
 
 
+    $("#btnFinalizarReqSeparacao").onclick = finalizarRequisicaoSeparacao;
+
     $("#reqConfBarcode").addEventListener("input",event=>{clearTimeout(reqConfTimerLeitura);const valor=event.currentTarget.value.trim();if(!valor)return;reqConfTimerLeitura=setTimeout(()=>processarCodigoReqConf(valor),180);});
     $("#reqConfBarcode").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();clearTimeout(reqConfTimerLeitura);processarCodigoReqConf(event.currentTarget.value);}});
     $("#btnReqConfFinalizar").onclick=salvarPedidoReqConf;
@@ -2228,6 +2318,25 @@ montarCalendario();
     const produto = { id: produtoSnap.id, ...produtoSnap.data() };
     if(produto.ativo === false) return null;
     return { produto, tipo: barra.tipo || "unidade", quantidade: Number(barra.quantidade || 1) };
+  };
+
+
+  window.firebaseSalvarPedidosSeparacao = async (pedidos) => {
+    let salvos = 0;
+
+    for(const pedido of pedidos){
+      await addDoc(collection(db, "pedidos"), {
+        ...pedido,
+        criadoEm: serverTimestamp(),
+        atualizadoEm: serverTimestamp(),
+        criadoPorUid: auth.currentUser ? auth.currentUser.uid : null,
+        criadoPorEmail: auth.currentUser ? auth.currentUser.email : null
+      });
+
+      salvos++;
+    }
+
+    return salvos;
   };
 
   window.firebaseSalvarPedidoConferencia = async (dados) => {
