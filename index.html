@@ -184,6 +184,40 @@
     .cp-readonly{opacity:.95}
     @media(max-width:760px){.cp-search{grid-template-columns:1fr}}
 
+
+    .dash-hero{
+      padding:20px;border:1px solid rgba(124,58,237,.35);border-radius:18px;
+      background:linear-gradient(135deg,rgba(124,58,237,.14),rgba(16,19,28,.72));
+      margin-bottom:14px
+    }
+    .dash-title{font-size:25px;font-weight:950;margin:0}
+    .dash-subtitle{color:var(--muted);margin-top:6px}
+    .dash-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .dash-card{
+      padding:16px;border:1px solid var(--line);border-radius:16px;
+      background:rgba(16,19,28,.62)
+    }
+    .dash-card .label{color:var(--muted);font-size:13px}
+    .dash-card .number{font-size:30px;font-weight:950;margin-top:8px}
+    .dash-card .detail{color:var(--muted);font-size:12px;margin-top:5px}
+    .dash-section{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:16px;background:rgba(16,19,28,.48)}
+    .dash-section h3{margin:0 0 10px;font-size:16px}
+    .dash-recent{display:grid;gap:8px}
+    .dash-recent-item{
+      display:grid;grid-template-columns:1.2fr 2fr 1fr 1fr;gap:10px;align-items:center;
+      padding:10px 12px;border:1px solid rgba(37,48,66,.72);border-radius:12px
+    }
+    .dash-status{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--line);display:inline-block}
+    .dash-status.pending{color:#fde68a;background:rgba(245,158,11,.12)}
+    .dash-status.progress{color:#bfdbfe;background:rgba(59,130,246,.12)}
+    .dash-status.done{color:#bbf7d0;background:rgba(34,197,94,.12)}
+    .dash-empty{color:var(--muted);padding:12px;text-align:center}
+    @media(max-width:1050px){.dash-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:700px){
+      .dash-grid{grid-template-columns:1fr}
+      .dash-recent-item{grid-template-columns:1fr}
+    }
+
     .hidden{display:none}
   </style>
 </head>
@@ -201,7 +235,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.8</span>
+        <span class="pill" id="ver">v3.0</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -276,7 +310,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.8 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 3.0 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -285,35 +319,61 @@
 
           <!-- INÍCIO -->
           <section data-section="inicio">
-            <h2>🏠 Início</h2>
-            <p class="muted">Resumo do “Entrada x Saída”.</p>
-
-        <div class="kpi">
-  <div class="box">
-    <div class="muted">Total (teórico)</div>
-    <div class="val" id="kTotal">—</div>
-  </div>
-  <div class="box">
-    <div class="muted">Real</div>
-    <div class="val" id="kReal">—</div>
-  </div>
-  <div class="box">
-    <div class="muted">Diferença</div>
-    <div class="val" id="kDiff">—</div>
-  </div>
-</div>
-
-<div class="muted tiny" style="margin-top:8px" id="kDataInfo">Nenhum dia selecionado.</div>
-
-            <div class="row" style="margin-top:10px">
-              <button class="btn primary" onclick="abrirExsDiaSelecionado()">Abrir Entrada x Saída</button>
-              <button class="btn" onclick="refreshResumo()">Atualizar painel</button>
-              <button class="btn good" onclick="marcarHoje()">Marcar hoje (bateu)</button>
+            <div class="dash-hero">
+              <div class="row" style="justify-content:space-between;align-items:flex-start">
+                <div>
+                  <h2 class="dash-title">🏢 Sistema Pioneira</h2>
+                  <div class="dash-subtitle">Controle de Operações Logísticas</div>
+                </div>
+                <button class="btn primary" id="btnAtualizarDashboard">Atualizar painel</button>
+              </div>
             </div>
 
-            <div class="sep"></div>
-            <div class="muted">✅ toda vez que a diferença ficar 0, você pode marcar o dia como “bateu”.</div>
-            <div style="margin-top:10px" id="cal"></div>
+            <div class="dash-grid">
+              <div class="dash-card">
+                <div class="label">📦 Aguardando conferência</div>
+                <div class="number" id="dashPendentes">—</div>
+                <div class="detail">Pedidos da Requisição Separação</div>
+              </div>
+
+              <div class="dash-card">
+                <div class="label">🔎 Em conferência</div>
+                <div class="number" id="dashEmConferencia">—</div>
+                <div class="detail">Pedidos iniciados e não finalizados</div>
+              </div>
+
+              <div class="dash-card">
+                <div class="label">✅ Conferidos hoje</div>
+                <div class="number" id="dashConferidosHoje">—</div>
+                <div class="detail">Pedidos finalizados no dia</div>
+              </div>
+
+              <div class="dash-card">
+                <div class="label">📊 Peças conferidas hoje</div>
+                <div class="number" id="dashPecasHoje">—</div>
+                <div class="detail">Somatório das quantidades conferidas</div>
+              </div>
+            </div>
+
+            <div class="dash-section">
+              <div class="row" style="justify-content:space-between">
+                <h3>Últimas movimentações</h3>
+                <span class="muted" id="dashAtualizadoEm">Ainda não atualizado</span>
+              </div>
+              <div id="dashUltimasMovimentacoes" class="dash-recent">
+                <div class="dash-empty">Carregando informações...</div>
+              </div>
+            </div>
+
+            <div class="dash-section">
+              <h3>Acessos rápidos</h3>
+              <div class="row">
+                <button class="btn primary" onclick="goto('requisicao')">Requisições Separação</button>
+                <button class="btn" onclick="goto('requisicaoConf')">Requisições Conferência</button>
+                <button class="btn good" onclick="goto('conferenciaPedidos')">Conferência de Pedidos</button>
+                <button class="btn" onclick="goto('produtos')">Produtos</button>
+              </div>
+            </div>
           </section>
 
           <!-- TRANSFERÊNCIA -->
@@ -760,6 +820,7 @@ function parseLines(text){
     aplicarPermissoes(perfil.permissoes);
     refreshResumo();
     montarCalendario();
+    carregarDashboard();
   }
 
   window.aplicarEstadoFirebase = setupUI;
@@ -837,6 +898,10 @@ function parseLines(text){
   window.addEventListener("hashchange", ()=>{
     const v = (location.hash||"#inicio").replace("#","");
     setView(v);
+
+    if(v === "inicio" && usuarioFirebaseAtual){
+      carregarDashboard();
+    }
   });
 
  // ---------- Data actions ----------
@@ -1813,6 +1878,131 @@ function limparProducao(){
 
 
 
+
+
+// ---------- Dashboard ----------
+function dashboardMesmoDia(timestamp){
+  if(!timestamp) return false;
+
+  const data = timestamp.seconds
+    ? new Date(timestamp.seconds * 1000)
+    : new Date(timestamp);
+
+  const hoje = new Date();
+
+  return data.getFullYear() === hoje.getFullYear()
+    && data.getMonth() === hoje.getMonth()
+    && data.getDate() === hoje.getDate();
+}
+
+function dashboardData(timestamp){
+  if(!timestamp) return "Sem data";
+
+  const data = timestamp.seconds
+    ? new Date(timestamp.seconds * 1000)
+    : new Date(timestamp);
+
+  return data.toLocaleString("pt-BR");
+}
+
+function dashboardStatus(status){
+  if(status === "conferido"){
+    return { texto:"Conferido", classe:"done" };
+  }
+
+  if(status === "em_conferencia"){
+    return { texto:"Em conferência", classe:"progress" };
+  }
+
+  return { texto:"Aguardando", classe:"pending" };
+}
+
+async function carregarDashboard(){
+  const lista = $("#dashUltimasMovimentacoes");
+
+  if(!window.firebaseListarPedidosDashboard){
+    lista.innerHTML = `<div class="dash-empty">Firebase ainda está carregando.</div>`;
+    return;
+  }
+
+  lista.innerHTML = `<div class="dash-empty">Atualizando painel...</div>`;
+
+  try{
+    const pedidos = await window.firebaseListarPedidosDashboard();
+
+    const pendentes = pedidos.filter(p=>
+      p.origem === "requisicoes_separacao"
+      && p.status === "aguardando_conferencia"
+    );
+
+    const emConferencia = pedidos.filter(p=>
+      p.origem === "requisicoes_separacao"
+      && p.status === "em_conferencia"
+    );
+
+    const conferidosHoje = pedidos.filter(p=>
+      p.origem === "requisicoes_separacao"
+      && p.status === "conferido"
+      && dashboardMesmoDia(p.conferenciaFinalizadaEm)
+    );
+
+    const pecasHoje = conferidosHoje.reduce((total,pedido)=>{
+      const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
+
+      return total + itens.reduce(
+        (soma,item)=>soma + Number(item.quantidadeConferida || 0),
+        0
+      );
+    },0);
+
+    $("#dashPendentes").textContent = pendentes.length;
+    $("#dashEmConferencia").textContent = emConferencia.length;
+    $("#dashConferidosHoje").textContent = conferidosHoje.length;
+    $("#dashPecasHoje").textContent = pecasHoje.toLocaleString("pt-BR");
+    $("#dashAtualizadoEm").textContent =
+      `Atualizado em ${new Date().toLocaleTimeString("pt-BR")}`;
+
+    const recentes = [...pedidos]
+      .sort((a,b)=>{
+        const ta = a.atualizadoEm?.seconds
+          || a.conferenciaFinalizadaEm?.seconds
+          || a.criadoEm?.seconds
+          || 0;
+
+        const tb = b.atualizadoEm?.seconds
+          || b.conferenciaFinalizadaEm?.seconds
+          || b.criadoEm?.seconds
+          || 0;
+
+        return tb-ta;
+      })
+      .slice(0,8);
+
+    if(!recentes.length){
+      lista.innerHTML = `<div class="dash-empty">Nenhuma movimentação registrada.</div>`;
+      return;
+    }
+
+    lista.innerHTML = recentes.map(pedido=>{
+      const status = dashboardStatus(pedido.status);
+      const data = pedido.atualizadoEm
+        || pedido.conferenciaFinalizadaEm
+        || pedido.criadoEm;
+
+      return `<div class="dash-recent-item">
+        <div><strong>${escapeHtml(pedido.pedido || "Sem número")}</strong></div>
+        <div class="muted">${escapeHtml(pedido.cliente || "Cliente não informado")}</div>
+        <div><span class="dash-status ${status.classe}">${status.texto}</span></div>
+        <div class="muted">${escapeHtml(dashboardData(data))}</div>
+      </div>`;
+    }).join("");
+  }catch(error){
+    console.error(error);
+
+    lista.innerHTML =
+      `<div class="dash-empty bad">Não foi possível carregar o dashboard.</div>`;
+  }
+}
 
 // ---------- Conferência de Pedidos ----------
 let cpPedidosCache = [];
@@ -2912,6 +3102,7 @@ if(exs){
 
 
 
+    $("#btnAtualizarDashboard").onclick = carregarDashboard;
     $("#btnCpPendentes").onclick = ()=>abrirAbaCp("pendentes");
     $("#btnCpHistorico").onclick = ()=>abrirAbaCp("historico");
     $("#btnCpBuscarHistorico").onclick = carregarHistoricoConferencias;
@@ -3128,6 +3319,16 @@ montarCalendario();
 
 
 
+
+
+  window.firebaseListarPedidosDashboard = async () => {
+    const snapshot = await getDocs(collection(db,"pedidos"));
+
+    return snapshot.docs.map(documento=>({
+      id:documento.id,
+      ...documento.data()
+    }));
+  };
 
   window.firebaseListarHistoricoConferencias = async () => {
     const snapshot = await getDocs(collection(db,"pedidos"));
