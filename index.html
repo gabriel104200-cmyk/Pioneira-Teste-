@@ -168,7 +168,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.4</span>
+        <span class="pill" id="ver">v2.4.1</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -242,7 +242,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.4 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 2.4.1 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -1808,9 +1808,7 @@ function gerarTxtReqConfBipagem(){
     ].join("|"));
   }
 
-  const txt=out.join("
-")+"
-";
+  const txt=out.join("\r\n")+"\r\n";
   const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
   const a=document.createElement("a");
 
