@@ -218,6 +218,47 @@
       .dash-recent-item{grid-template-columns:1fr}
     }
 
+
+    .progress-shell{margin-top:14px}
+    .progress-track{
+      width:100%;height:16px;border-radius:999px;background:#252a38;overflow:hidden;
+      border:1px solid var(--line)
+    }
+    .progress-fill{
+      height:100%;width:0%;background:linear-gradient(90deg,#16a34a,#22c55e);
+      transition:width .25s ease
+    }
+    .progress-text{margin-top:7px;color:var(--muted);font-size:13px}
+    .last-read-card{
+      margin-top:12px;padding:15px;border:1px solid var(--line);border-radius:15px;
+      background:rgba(16,19,28,.62)
+    }
+    .last-read-card .code{font-size:22px;font-weight:950}
+    .last-read-card .desc{font-size:15px;margin-top:4px}
+    .last-read-card .grades{margin-top:6px;color:var(--muted)}
+    .last-read-card.success{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.09)}
+    .last-read-card.error{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.09)}
+    .last-read-card.warn{border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.09)}
+    .admin-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+    .admin-kpi{padding:15px;border:1px solid var(--line);border-radius:15px;background:rgba(16,19,28,.58)}
+    .admin-kpi .n{font-size:26px;font-weight:950;margin-top:6px}
+    .admin-panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .admin-panel{padding:15px;border:1px solid var(--line);border-radius:15px;background:rgba(16,19,28,.48)}
+    .admin-panel h3{margin:0 0 10px}
+    .audit-list{display:grid;gap:8px}
+    .audit-item{padding:10px;border:1px solid rgba(37,48,66,.7);border-radius:10px}
+    .audit-item .meta{color:var(--muted);font-size:12px;margin-top:4px}
+    .sound-toggle{display:flex;align-items:center;gap:8px}
+    .mobile-hint{display:none}
+    @media(max-width:1000px){
+      .admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .admin-panels{grid-template-columns:1fr}
+    }
+    @media(max-width:650px){
+      .admin-grid{grid-template-columns:1fr}
+      .mobile-hint{display:block;color:var(--muted);font-size:12px;margin-top:8px}
+    }
+
     .hidden{display:none}
   </style>
 </head>
@@ -235,7 +276,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v3.0</span>
+        <span class="pill" id="ver">v3.5</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -310,7 +351,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 3.0 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 3.5 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -353,6 +394,12 @@
                 <div class="number" id="dashPecasHoje">—</div>
                 <div class="detail">Somatório das quantidades conferidas</div>
               </div>
+
+              <div class="dash-card">
+                <div class="label">⚠️ Ajustes registrados</div>
+                <div class="number" id="dashAjustes">—</div>
+                <div class="detail">Ajustes realizados em conferências</div>
+              </div>
             </div>
 
             <div class="dash-section">
@@ -363,6 +410,17 @@
               <div id="dashUltimasMovimentacoes" class="dash-recent">
                 <div class="dash-empty">Carregando informações...</div>
               </div>
+            </div>
+
+            <div class="dash-section">
+              <div class="row" style="justify-content:space-between">
+                <h3>Preferências da conferência</h3>
+                <label class="sound-toggle">
+                  <input id="toggleSons" type="checkbox" style="width:auto">
+                  <span>Ativar sons de confirmação e erro</span>
+                </label>
+              </div>
+              <div class="mobile-hint">No celular, use um leitor Bluetooth para manter a bipagem contínua.</div>
             </div>
 
             <div class="dash-section">
@@ -493,10 +551,21 @@
                 <div class="box"><div class="muted">Excesso</div><div class="val" id="cpExcesso">0</div></div>
               </div>
 
+              <div class="progress-shell">
+                <div class="progress-track"><div id="cpProgressFill" class="progress-fill"></div></div>
+                <div id="cpProgressText" class="progress-text">0 de 0 peças conferidas — 0%</div>
+              </div>
+
               <div id="cpScanArea" class="cp-scan-box">
                 <label class="muted" for="cpBarcode">Código de barras</label>
                 <input id="cpBarcode" class="cp-scan-input" inputmode="numeric" autocomplete="off" placeholder="Bipe o produto — leitura automática">
                 <div id="cpUltimaLeitura" class="cp-last muted">Aguardando a primeira leitura.</div>
+                <div id="cpUltimoProduto" class="last-read-card">
+                  <div class="muted">Última leitura</div>
+                  <div class="code">—</div>
+                  <div class="desc">Nenhum produto lido</div>
+                  <div class="grades">—</div>
+                </div>
               </div>
 
               <div id="cpAcoesConferencia" class="row" style="margin-top:12px">
@@ -627,22 +696,60 @@
 
           <!-- ADMIN -->
           <section data-section="admin" class="hidden">
-            <h2>🛠️ Admin</h2>
-            <p class="muted">Administração de usuários, permissões e dados do sistema.</p>
+            <div class="row" style="justify-content:space-between">
+              <div>
+                <h2>🛠️ Administração</h2>
+                <p class="muted">Visão geral de usuários, pedidos e auditoria.</p>
+              </div>
+              <button class="btn primary" id="btnAtualizarAdmin">Atualizar</button>
+            </div>
 
-            <div style="max-width:520px">
-              <label class="muted">Email (somente registro local)</label>
-              <input id="adEmail" type="email" placeholder="seuemail@exemplo.com">
-              <div class="row" style="margin-top:10px">
-                <button class="btn primary" onclick="salvarEmail()">Salvar Email</button>
-                <button class="btn" onclick="carregarEmail()">Recarregar</button>
-                <button class="btn warn" onclick="resetTudo()">Resetar tudo</button>
+            <div class="admin-grid">
+              <div class="admin-kpi">
+                <div class="muted">Usuários cadastrados</div>
+                <div class="n" id="adminUsuarios">—</div>
+              </div>
+              <div class="admin-kpi">
+                <div class="muted">Pedidos pendentes</div>
+                <div class="n" id="adminPendentes">—</div>
+              </div>
+              <div class="admin-kpi">
+                <div class="muted">Pedidos conferidos</div>
+                <div class="n" id="adminConferidos">—</div>
+              </div>
+              <div class="admin-kpi">
+                <div class="muted">Ajustes de auditoria</div>
+                <div class="n" id="adminAjustes">—</div>
               </div>
             </div>
 
-            <div class="sep"></div>
-            <div class="muted tiny">
-              O login já utiliza Firebase Authentication. O cadastro de usuários e permissões será implementado na próxima etapa.
+            <div class="admin-panels">
+              <div class="admin-panel">
+                <h3>Usuários</h3>
+                <div id="adminListaUsuarios" class="audit-list">
+                  <div class="muted">Carregando...</div>
+                </div>
+              </div>
+
+              <div class="admin-panel">
+                <h3>Últimos ajustes</h3>
+                <div id="adminListaAjustes" class="audit-list">
+                  <div class="muted">Carregando...</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-panel" style="margin-top:14px">
+              <h3>Manutenção local</h3>
+              <div style="max-width:520px">
+                <label class="muted">Email de referência</label>
+                <input id="adEmail" type="email" placeholder="seuemail@exemplo.com">
+                <div class="row" style="margin-top:10px">
+                  <button class="btn primary" onclick="salvarEmail()">Salvar Email</button>
+                  <button class="btn" onclick="carregarEmail()">Recarregar</button>
+                  <button class="btn warn" onclick="resetTudo()">Resetar dados locais</button>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -901,6 +1008,10 @@ function parseLines(text){
 
     if(v === "inicio" && usuarioFirebaseAtual){
       carregarDashboard();
+    }
+
+    if(v === "admin" && usuarioFirebaseAtual){
+      carregarAdmin();
     }
   });
 
@@ -1880,6 +1991,113 @@ function limparProducao(){
 
 
 
+
+// ---------- Sons e preferências ----------
+let sonsConferenciaAtivos = LS("sons_conferencia") === "1";
+
+function atualizarToggleSons(){
+  const toggle = $("#toggleSons");
+  if(toggle) toggle.checked = sonsConferenciaAtivos;
+}
+
+function tocarSom(tipo){
+  if(!sonsConferenciaAtivos) return;
+
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    const config = {
+      sucesso:{freq:880,duracao:.09,repeticoes:1},
+      alerta:{freq:520,duracao:.16,repeticoes:2},
+      erro:{freq:220,duracao:.45,repeticoes:1}
+    }[tipo] || {freq:440,duracao:.12,repeticoes:1};
+
+    osc.frequency.value = config.freq;
+    osc.type = "sine";
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const agora = ctx.currentTime;
+    gain.gain.setValueAtTime(.0001,agora);
+    gain.gain.exponentialRampToValueAtTime(.18,agora+.01);
+    gain.gain.exponentialRampToValueAtTime(.0001,agora+config.duracao);
+
+    osc.start(agora);
+    osc.stop(agora+config.duracao+.03);
+  }catch(error){
+    console.warn("Não foi possível tocar o som.",error);
+  }
+}
+
+function atualizarPainelUltimaLeitura(tipo,dados={}){
+  const card = $("#cpUltimoProduto");
+  if(!card) return;
+
+  card.className = `last-read-card ${tipo||""}`;
+
+  const code = card.querySelector(".code");
+  const desc = card.querySelector(".desc");
+  const grades = card.querySelector(".grades");
+
+  code.textContent = dados.codigo || "—";
+  desc.textContent = dados.descricao || "Nenhum produto lido";
+  grades.textContent = dados.grades || "—";
+}
+
+// ---------- Administração ----------
+async function carregarAdmin(){
+  if(!window.firebaseCarregarAdmin) return;
+
+  try{
+    const dados = await window.firebaseCarregarAdmin();
+
+    $("#adminUsuarios").textContent = dados.usuarios.length;
+    $("#adminPendentes").textContent = dados.pedidos.filter(p=>
+      p.origem==="requisicoes_separacao"
+      && ["aguardando_conferencia","em_conferencia"].includes(p.status)
+    ).length;
+    $("#adminConferidos").textContent = dados.pedidos.filter(p=>p.status==="conferido").length;
+
+    const ajustes = [];
+    for(const pedido of dados.pedidos){
+      const lista = Array.isArray(pedido.ajustes)?pedido.ajustes:[];
+      for(const ajuste of lista){
+        ajustes.push({...ajuste,pedido:pedido.pedido,cliente:pedido.cliente});
+      }
+    }
+
+    $("#adminAjustes").textContent = ajustes.length;
+
+    $("#adminListaUsuarios").innerHTML = dados.usuarios.length
+      ? dados.usuarios.map(usuario=>`<div class="audit-item">
+          <strong>${escapeHtml(usuario.nome||usuario.email||"Usuário")}</strong>
+          <div>${escapeHtml(usuario.email||"")}</div>
+          <div class="meta">Perfil: ${escapeHtml(usuario.perfil||"consulta")} • ${usuario.ativo===true?"Ativo":"Inativo"}</div>
+        </div>`).join("")
+      : `<div class="muted">Nenhum usuário encontrado.</div>`;
+
+    ajustes.sort((a,b)=>String(b.registradoEm||"").localeCompare(String(a.registradoEm||"")));
+
+    $("#adminListaAjustes").innerHTML = ajustes.length
+      ? ajustes.slice(0,12).map(ajuste=>`<div class="audit-item">
+          <strong>${escapeHtml(ajuste.pedido||"Pedido")}</strong> — ${escapeHtml(ajuste.codigo||"")}
+          <div>${escapeHtml(ajuste.descricao||"")}</div>
+          <div class="meta">
+            Alteração: ${Number(ajuste.alteracao||0)>0?"+":""}${Number(ajuste.alteracao||0)}
+            • ${escapeHtml(ajuste.motivo||"Sem motivo")}
+            • ${escapeHtml(ajuste.usuarioEmail||"")}
+          </div>
+        </div>`).join("")
+      : `<div class="muted">Nenhum ajuste registrado.</div>`;
+  }catch(error){
+    console.error(error);
+    toast("Não foi possível carregar a área administrativa.",false);
+  }
+}
+
 // ---------- Dashboard ----------
 function dashboardMesmoDia(timestamp){
   if(!timestamp) return false;
@@ -1959,6 +2177,12 @@ async function carregarDashboard(){
     $("#dashEmConferencia").textContent = emConferencia.length;
     $("#dashConferidosHoje").textContent = conferidosHoje.length;
     $("#dashPecasHoje").textContent = pecasHoje.toLocaleString("pt-BR");
+
+    const totalAjustes = pedidos.reduce((total,pedido)=>{
+      return total + (Array.isArray(pedido.ajustes) ? pedido.ajustes.length : 0);
+    },0);
+
+    $("#dashAjustes").textContent = totalAjustes;
     $("#dashAtualizadoEm").textContent =
       `Atualizado em ${new Date().toLocaleTimeString("pt-BR")}`;
 
@@ -2165,6 +2389,7 @@ async function abrirPedidoConferencia(id){
     $("#cpAcoesConferencia").classList.remove("hidden");
     $("#cpPedidoInfo").textContent = `${pedido.pedido} — ${pedido.cliente || ""}`;
     $("#cpUltimaLeitura").textContent = "Aguardando a primeira leitura.";
+    atualizarPainelUltimaLeitura("",{});
     $("#cpMensagemFinal").classList.add("hidden");
 
     renderizarConferenciaPedido();
@@ -2191,6 +2416,14 @@ function renderizarConferenciaPedido(){
   $("#cpFaltam").textContent = faltam;
   $("#cpExcesso").textContent = excesso;
   $("#btnCpFinalizar").disabled = !completo;
+
+  const percentual = esperado > 0
+    ? Math.min(100,Math.round((conferido/esperado)*100))
+    : 0;
+
+  $("#cpProgressFill").style.width = `${percentual}%`;
+  $("#cpProgressText").textContent =
+    `${conferido} de ${esperado} peças conferidas — ${percentual}%`;
 
   if(completo){
     $("#cpMensagemFinal").classList.remove("hidden");
@@ -2267,6 +2500,12 @@ async function processarCodigoConferenciaPedido(codigo){
 
     if(!resultado){
       $("#cpUltimaLeitura").innerHTML = `<span class="bad">Código não cadastrado: ${escapeHtml(barra)}</span>`;
+      atualizarPainelUltimaLeitura("error",{
+        codigo:barra,
+        descricao:"Código de barras não cadastrado",
+        grades:"Verifique o cadastro do produto"
+      });
+      tocarSom("erro");
       toast("Código de barras não encontrado.",false);
       return;
     }
@@ -2287,6 +2526,12 @@ async function processarCodigoConferenciaPedido(codigo){
         `<span class="bad">Produto não pertence a este pedido.</span><br>` +
         `${escapeHtml(produto.codigo)} — ${escapeHtml(produto.produto)} • ` +
         `${escapeHtml(produto.grade1)} • ${escapeHtml(produto.grade2)} • ${escapeHtml(produto.grade3)}`;
+      atualizarPainelUltimaLeitura("error",{
+        codigo:produto.codigo,
+        descricao:produto.produto,
+        grades:`${produto.grade1} • ${produto.grade2} • ${produto.grade3} — não pertence ao pedido`
+      });
+      tocarSom("erro");
       toast("Produto não pertence ao pedido.",false);
       return;
     }
@@ -2295,10 +2540,19 @@ async function processarCodigoConferenciaPedido(codigo){
     cpItensMap.set(chave,item);
     cpHistorico.push({chave,quantidade});
 
+    const ultrapassou = item.quantidadeConferida > item.quantidadeEsperada;
+
     $("#cpUltimaLeitura").innerHTML =
-      `<span class="ok">✓ ${escapeHtml(produto.codigo)} — ${escapeHtml(produto.produto)}</span><br>` +
+      `<span class="${ultrapassou?"bad":"ok"}">${ultrapassou?"⚠ Excesso":"✓ Correto"} — ${escapeHtml(produto.codigo)} — ${escapeHtml(produto.produto)}</span><br>` +
       `${escapeHtml(produto.grade1)} • ${escapeHtml(produto.grade2)} • ${escapeHtml(produto.grade3)} | +${quantidade}`;
 
+    atualizarPainelUltimaLeitura(ultrapassou?"warn":"success",{
+      codigo:produto.codigo,
+      descricao:produto.produto,
+      grades:`${produto.grade1} • ${produto.grade2} • ${produto.grade3} | ${item.quantidadeConferida}/${item.quantidadeEsperada}`
+    });
+
+    tocarSom(ultrapassou?"alerta":"sucesso");
     renderizarConferenciaPedido();
     await salvarProgressoConferenciaPedido();
   }catch(error){
@@ -3102,6 +3356,15 @@ if(exs){
 
 
 
+    atualizarToggleSons();
+
+    $("#toggleSons").onchange = event=>{
+      sonsConferenciaAtivos = event.currentTarget.checked;
+      LS("sons_conferencia",sonsConferenciaAtivos?"1":"0");
+      if(sonsConferenciaAtivos) tocarSom("sucesso");
+    };
+
+    $("#btnAtualizarAdmin").onclick = carregarAdmin;
     $("#btnAtualizarDashboard").onclick = carregarDashboard;
     $("#btnCpPendentes").onclick = ()=>abrirAbaCp("pendentes");
     $("#btnCpHistorico").onclick = ()=>abrirAbaCp("historico");
@@ -3320,6 +3583,19 @@ montarCalendario();
 
 
 
+
+
+  window.firebaseCarregarAdmin = async () => {
+    const [usuariosSnapshot,pedidosSnapshot] = await Promise.all([
+      getDocs(collection(db,"usuarios")),
+      getDocs(collection(db,"pedidos"))
+    ]);
+
+    return {
+      usuarios:usuariosSnapshot.docs.map(d=>({id:d.id,...d.data()})),
+      pedidos:pedidosSnapshot.docs.map(d=>({id:d.id,...d.data()}))
+    };
+  };
 
   window.firebaseListarPedidosDashboard = async () => {
     const snapshot = await getDocs(collection(db,"pedidos"));
