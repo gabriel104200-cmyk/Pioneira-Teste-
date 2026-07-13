@@ -303,6 +303,54 @@
     .exs-dot.diff{background:#f59e0b}
     .exs-dot.empty{background:#4b5563}
 
+
+    .produto-toolbar{
+      display:grid;grid-template-columns:minmax(240px,1fr) auto auto auto;
+      gap:10px;align-items:center;margin:12px 0
+    }
+    .produto-toolbar input{min-width:0}
+    .produto-import-box{
+      margin-top:12px;padding:14px;border:1px solid var(--line);
+      border-radius:15px;background:rgba(16,19,28,.48)
+    }
+    .produto-table-wrap{overflow:auto;max-height:580px;margin-top:12px}
+    .produto-table-wrap table{min-width:1320px}
+    .produto-actions-cell{display:flex;gap:6px;flex-wrap:wrap}
+    .produto-actions-cell .btn{padding:6px 8px;border-radius:8px;font-size:12px}
+    .produto-inativo{opacity:.55}
+    .modal-backdrop{
+      position:fixed;inset:0;z-index:30000;background:rgba(0,0,0,.72);
+      display:flex;align-items:center;justify-content:center;padding:20px
+    }
+    .modal-card{
+      width:min(760px,100%);max-height:92vh;overflow:auto;
+      border:1px solid var(--line);border-radius:20px;padding:20px;
+      background:#141823;box-shadow:0 24px 80px rgba(0,0,0,.55)
+    }
+    .modal-card h2{margin:0}
+    .modal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:15px}
+    .modal-grid .full{grid-column:1/-1}
+    .modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+    .historico-lista{display:grid;gap:9px;margin-top:14px}
+    .historico-item{
+      padding:11px;border:1px solid rgba(37,48,66,.75);
+      border-radius:11px;background:rgba(16,19,28,.55)
+    }
+    .historico-item .meta{color:var(--muted);font-size:12px;margin-top:5px}
+    .status-badge{
+      display:inline-block;padding:4px 8px;border-radius:999px;
+      border:1px solid var(--line);font-size:11px
+    }
+    .status-badge.ativo{color:#bbf7d0;background:rgba(34,197,94,.12)}
+    .status-badge.inativo{color:#fecaca;background:rgba(239,68,68,.12)}
+    @media(max-width:900px){
+      .produto-toolbar{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:650px){
+      .produto-toolbar{grid-template-columns:1fr}
+      .modal-grid{grid-template-columns:1fr}
+    }
+
     .hidden{display:none}
   </style>
 </head>
@@ -320,7 +368,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v3.6</span>
+        <span class="pill" id="ver">v4.0</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -395,7 +443,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 3.6 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 4.0 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -742,23 +790,38 @@
 
           <!-- PRODUTOS -->
           <section data-section="produtos" class="hidden">
-            <h2>📦 Cadastro de Produtos</h2>
-            <p class="muted">
-              Cole a planilha no formato:
-              Cod.;Produto;Grade 1;Grade 2;Grade 3;Unidade;Código Unidade;Caixa;Código Caixa
-            </p>
+            <div class="row" style="justify-content:space-between;align-items:flex-start">
+              <div>
+                <h2>📦 Cadastro Mestre de Produtos</h2>
+                <p class="muted">Cadastre, edite, pesquise, inative e exporte produtos diretamente pelo sistema.</p>
+              </div>
+              <button class="btn good" id="btnNovoProduto">➕ Novo Produto</button>
+            </div>
 
-            <textarea id="txProdutos" placeholder="2900;Conjunto De Pvc - Combate Gola;Masculino;Preto;PP;1;7898712119560;10;17898712119567"></textarea>
+            <div class="produto-toolbar">
+              <input id="produtoPesquisa" placeholder="Pesquisar por código, descrição, grade ou código de barras">
+              <button class="btn" id="btnCarregarProdutos">🔄 Atualizar</button>
+              <button class="btn" id="btnExportarProdutos">📤 Exportar cadastro</button>
+              <button class="btn" id="btnAlternarImportacao">📥 Importar planilha</button>
+            </div>
 
-            <div class="produto-actions">
-              <button class="btn primary" id="btnPreviewProdutos">Visualizar</button>
-              <button class="btn good" id="btnImportarProdutos">Importar para o Firebase</button>
-              <button class="btn" id="btnLimparProdutos">Limpar</button>
-              <button class="btn" id="btnCarregarProdutos">Carregar cadastrados</button>
+            <div id="produtoImportBox" class="produto-import-box hidden">
+              <p class="muted">
+                Formato:
+                Cod.;Produto;Grade 1;Grade 2;Grade 3;Unidade;Código Unidade;Caixa;Código Caixa
+              </p>
+
+              <textarea id="txProdutos" placeholder="2900;Conjunto De Pvc - Combate Gola;Masculino;Preto;PP;1;7898712119560;10;17898712119567"></textarea>
+
+              <div class="produto-actions">
+                <button class="btn primary" id="btnPreviewProdutos">Visualizar</button>
+                <button class="btn good" id="btnImportarProdutos">Importar / Atualizar Firebase</button>
+                <button class="btn" id="btnLimparProdutos">Limpar</button>
+              </div>
             </div>
 
             <div id="produtoStatus" class="produto-status muted">
-              Nenhum produto preparado para importação.
+              Clique em Atualizar para carregar os produtos cadastrados.
             </div>
 
             <div id="tbProdutos" class="produto-table-wrap"></div>
@@ -825,6 +888,85 @@
 
         </div>
       </div>
+    </div>
+  </div>
+
+
+  <div id="produtoModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="produtoModalTitulo">Novo Produto</h2>
+        <button class="btn" id="btnFecharProdutoModal">✕</button>
+      </div>
+
+      <input id="produtoEditId" type="hidden">
+      <input id="produtoEditCodigoUnidadeAntigo" type="hidden">
+      <input id="produtoEditCodigoCaixaAntigo" type="hidden">
+
+      <div class="modal-grid">
+        <div>
+          <label class="muted">Código</label>
+          <input id="produtoEditCodigo">
+        </div>
+        <div>
+          <label class="muted">Descrição</label>
+          <input id="produtoEditDescricao">
+        </div>
+        <div>
+          <label class="muted">Grade 1</label>
+          <input id="produtoEditGrade1">
+        </div>
+        <div>
+          <label class="muted">Grade 2</label>
+          <input id="produtoEditGrade2">
+        </div>
+        <div>
+          <label class="muted">Grade 3</label>
+          <input id="produtoEditGrade3">
+        </div>
+        <div>
+          <label class="muted">Unidade</label>
+          <input id="produtoEditUnidade" type="number" step="any" value="1">
+        </div>
+        <div>
+          <label class="muted">Código de barras da unidade</label>
+          <input id="produtoEditCodigoUnidade" inputmode="numeric">
+        </div>
+        <div>
+          <label class="muted">Quantidade por caixa</label>
+          <input id="produtoEditCaixa" type="number" step="any" value="0">
+        </div>
+        <div>
+          <label class="muted">Código de barras da caixa</label>
+          <input id="produtoEditCodigoCaixa" inputmode="numeric">
+        </div>
+        <div>
+          <label class="muted">Status</label>
+          <select id="produtoEditAtivo">
+            <option value="true">Ativo</option>
+            <option value="false">Inativo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn" id="btnCancelarProduto">Cancelar</button>
+        <button class="btn good" id="btnSalvarProduto">Salvar Produto</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="produtoHistoricoModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <h2>🕒 Histórico do Produto</h2>
+          <div class="muted" id="produtoHistoricoTitulo">—</div>
+        </div>
+        <button class="btn" id="btnFecharHistoricoProduto">✕</button>
+      </div>
+
+      <div id="produtoHistoricoLista" class="historico-lista"></div>
     </div>
   </div>
 
@@ -1086,6 +1228,10 @@ function parseLines(text){
 
     if(v === "exs" && usuarioFirebaseAtual){
       montarCalendarioExs();
+    }
+
+    if(v === "produtos" && usuarioFirebaseAtual){
+      carregarProdutosFirebase();
     }
   });
 
@@ -3182,8 +3328,10 @@ function gerarTxtReqConfBipagem(){
 }
 async function salvarPedidoReqConf(){const linhas=montarLinhasReqConf();if(!linhas)return;if(!window.firebaseSalvarPedidoConferencia){toast("Módulo de pedidos ainda carregando.",false);return;}const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();const itens=Array.from(reqConfItensMap.values()).map(i=>({codigo:i.codigo,produto:i.produto,grade1:i.grade1,grade2:i.grade2,grade3:i.grade3,quantidade:i.quantidade}));const btn=$("#btnReqConfFinalizar");btn.disabled=true;btn.textContent="Salvando...";try{const id=await window.firebaseSalvarPedidoConferencia({pedido,cliente,departamento:"25",tipo:"requisicao_conferencia",status:"finalizado",itens});toast(`Pedido salvo com sucesso. Registro: ${id}`);LSJ("tab_reqConf",linhas);}catch(e){console.error(e);toast("Não foi possível salvar o pedido.",false);}finally{btn.disabled=false;btn.textContent="Salvar pedido";focarLeitorReqConf();}}
 
-// ---------- Produtos Firebase ----------
+// ---------- Cadastro Mestre de Produtos ----------
 let produtosPreview = [];
+let produtosCadastrados = [];
+let produtoFiltroAtual = "";
 
 function normalizarCodigoBarras(valor){
   return String(valor ?? "").trim().replace(/\s+/g, "");
@@ -3213,7 +3361,11 @@ function lerProdutosTexto(){
     if(!r || r.length < 9) return;
 
     const primeira = String(r[0] ?? "").trim().toLowerCase();
-    if(indice === 0 && (primeira === "cod." || primeira === "cod" || primeira.includes("código"))) return;
+    if(indice === 0 && (
+      primeira === "cod."
+      || primeira === "cod"
+      || primeira.includes("código")
+    )) return;
 
     const item = {
       codigo: String(r[0] ?? "").trim(),
@@ -3229,19 +3381,21 @@ function lerProdutosTexto(){
     };
 
     if(!item.codigo || !item.produto){
-      erros.push(`Linha ${indice+1}: código ou produto vazio.`);
+      erros.push(`Linha ${indice+1}: código ou descrição vazios.`);
       return;
     }
 
-    const id = criarIdProduto(item);
-    item.id = id;
+    item.id = criarIdProduto(item);
 
-    for(const [tipo, barra] of [["unidade", item.codigoUnidade], ["caixa", item.codigoCaixa]]){
+    for(const barra of [item.codigoUnidade,item.codigoCaixa]){
       if(!barra) continue;
+
       if(barrasVistas.has(barra)){
-        erros.push(`Código de barras duplicado ${barra}: ${barrasVistas.get(barra)} e ${id}.`);
+        erros.push(
+          `Código de barras duplicado ${barra}: ${barrasVistas.get(barra)} e ${item.id}.`
+        );
       }else{
-        barrasVistas.set(barra, id);
+        barrasVistas.set(barra,item.id);
       }
     }
 
@@ -3251,39 +3405,117 @@ function lerProdutosTexto(){
   return { produtos, erros };
 }
 
-function renderizarProdutos(produtos){
-  const rows = produtos.map(p=>[
-    p.codigo, p.produto, p.grade1, p.grade2, p.grade3,
-    p.unidade, p.codigoUnidade, p.caixa, p.codigoCaixa,
-    p.ativo ? "ATIVO" : "INATIVO"
-  ]);
+function produtoTextoPesquisa(produto){
+  return [
+    produto.codigo,
+    produto.produto,
+    produto.grade1,
+    produto.grade2,
+    produto.grade3,
+    produto.codigoUnidade,
+    produto.codigoCaixa,
+    produto.ativo ? "ativo" : "inativo"
+  ].join(" ").toLowerCase();
+}
 
-  $("#tbProdutos").innerHTML = renderTable(
-    ["Código","Produto","Grade 1","Grade 2","Grade 3","Unid.","Código Unidade","Caixa","Código Caixa","Status"],
-    rows
+function produtosFiltrados(){
+  const termo = produtoFiltroAtual.trim().toLowerCase();
+
+  if(!termo) return produtosCadastrados;
+
+  return produtosCadastrados.filter(produto=>
+    produtoTextoPesquisa(produto).includes(termo)
   );
+}
+
+function renderizarProdutos(produtos = produtosFiltrados()){
+  if(!produtos.length){
+    $("#tbProdutos").innerHTML =
+      `<div class="muted" style="padding:15px">Nenhum produto encontrado.</div>`;
+    return;
+  }
+
+  let html = `<table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Produto</th>
+        <th>Grade 1</th>
+        <th>Grade 2</th>
+        <th>Grade 3</th>
+        <th>Unid.</th>
+        <th>Código Unidade</th>
+        <th>Caixa</th>
+        <th>Código Caixa</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  for(const p of produtos){
+    html += `<tr class="${p.ativo === false ? "produto-inativo" : ""}">
+      <td>${escapeHtml(String(p.codigo ?? ""))}</td>
+      <td>${escapeHtml(String(p.produto ?? ""))}</td>
+      <td>${escapeHtml(String(p.grade1 ?? ""))}</td>
+      <td>${escapeHtml(String(p.grade2 ?? ""))}</td>
+      <td>${escapeHtml(String(p.grade3 ?? ""))}</td>
+      <td>${escapeHtml(String(p.unidade ?? ""))}</td>
+      <td>${escapeHtml(String(p.codigoUnidade ?? ""))}</td>
+      <td>${escapeHtml(String(p.caixa ?? ""))}</td>
+      <td>${escapeHtml(String(p.codigoCaixa ?? ""))}</td>
+      <td>
+        <span class="status-badge ${p.ativo === false ? "inativo" : "ativo"}">
+          ${p.ativo === false ? "INATIVO" : "ATIVO"}
+        </span>
+      </td>
+      <td>
+        <div class="produto-actions-cell">
+          <button class="btn primary" onclick="abrirEditarProduto('${p.id}')">✏️ Editar</button>
+          <button class="btn" onclick="abrirHistoricoProduto('${p.id}')">🕒 Histórico</button>
+          <button class="btn ${p.ativo === false ? "good" : "warn"}"
+            onclick="alternarStatusProduto('${p.id}')">
+            ${p.ativo === false ? "Reativar" : "Inativar"}
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  html += `</tbody></table>`;
+  $("#tbProdutos").innerHTML = html;
 }
 
 function visualizarProdutos(){
   const { produtos, erros } = lerProdutosTexto();
   produtosPreview = produtos;
-  renderizarProdutos(produtos);
 
   if(erros.length){
     $("#produtoStatus").innerHTML =
       `<span class="bad">Foram encontrados ${erros.length} erro(s).</span><br>` +
       erros.slice(0,10).map(escapeHtml).join("<br>");
-    toast("Revise os erros antes de importar.", false);
+
+    toast("Revise os erros antes de importar.",false);
     return;
   }
 
+  const rows = produtos.map(p=>[
+    p.codigo,p.produto,p.grade1,p.grade2,p.grade3,
+    p.unidade,p.codigoUnidade,p.caixa,p.codigoCaixa
+  ]);
+
+  $("#tbProdutos").innerHTML = renderTable(
+    ["Código","Produto","Grade 1","Grade 2","Grade 3","Unid.","Código Unidade","Caixa","Código Caixa"],
+    rows
+  );
+
   $("#produtoStatus").innerHTML =
-    `<span class="ok">${produtos.length} produto(s) prontos para importação.</span>`;
+    `<span class="ok">${produtos.length} produto(s) prontos para importar ou atualizar.</span>`;
 }
 
 async function importarProdutosFirebase(){
   if(!perfilUsuarioAtual || perfilUsuarioAtual.perfil !== "administrador"){
-    toast("Somente administradores podem importar produtos.", false);
+    toast("Somente administradores podem importar produtos.",false);
     return;
   }
 
@@ -3297,12 +3529,7 @@ async function importarProdutosFirebase(){
   }
 
   if(!produtos.length){
-    toast("Nenhum produto válido para importar.", false);
-    return;
-  }
-
-  if(!window.firebaseImportarProdutos){
-    toast("Módulo de produtos ainda está carregando.", false);
+    toast("Nenhum produto válido para importar.",false);
     return;
   }
 
@@ -3311,40 +3538,56 @@ async function importarProdutosFirebase(){
   btn.textContent = "Importando...";
 
   try{
-    const resultado = await window.firebaseImportarProdutos(produtos, (atual,total)=>{
-      $("#produtoStatus").textContent = `Importando ${atual} de ${total}...`;
-    });
+    const resultado = await window.firebaseImportarProdutos(
+      produtos,
+      (atual,total)=>{
+        $("#produtoStatus").textContent = `Importando ${atual} de ${total}...`;
+      }
+    );
 
     $("#produtoStatus").innerHTML =
       `<span class="ok">Importação concluída.</span> ` +
-      `${resultado.produtos} produto(s) e ${resultado.barras} código(s) de barras gravados.`;
+      `${resultado.produtos} produto(s) processados e ${resultado.barras} código(s) de barras gravados.`;
 
-    toast("Produtos importados com sucesso.");
+    toast("Cadastro importado e atualizado com sucesso.");
+    await carregarProdutosFirebase();
   }catch(error){
     console.error(error);
     $("#produtoStatus").innerHTML =
       `<span class="bad">Erro na importação: ${escapeHtml(error.message || "falha desconhecida")}</span>`;
-    toast("Não foi possível importar os produtos.", false);
+    toast("Não foi possível importar os produtos.",false);
   }finally{
     btn.disabled = false;
-    btn.textContent = "Importar para o Firebase";
+    btn.textContent = "Importar / Atualizar Firebase";
   }
 }
 
 async function carregarProdutosFirebase(){
   if(!window.firebaseListarProdutos){
-    toast("Módulo de produtos ainda está carregando.", false);
+    toast("Módulo de produtos ainda está carregando.",false);
     return;
   }
 
   $("#produtoStatus").textContent = "Carregando produtos...";
 
   try{
-    const produtos = await window.firebaseListarProdutos();
-    produtosPreview = produtos;
-    renderizarProdutos(produtos);
+    produtosCadastrados = await window.firebaseListarProdutos();
+
+    produtosCadastrados.sort((a,b)=>{
+      const codigo = String(a.codigo||"").localeCompare(String(b.codigo||""));
+      if(codigo !== 0) return codigo;
+
+      return [
+        a.grade1,a.grade2,a.grade3
+      ].join("|").localeCompare([
+        b.grade1,b.grade2,b.grade3
+      ].join("|"));
+    });
+
+    renderizarProdutos();
+
     $("#produtoStatus").innerHTML =
-      `<span class="ok">${produtos.length} produto(s) cadastrados no Firebase.</span>`;
+      `<span class="ok">${produtosCadastrados.length} produto(s) cadastrados no Firebase.</span>`;
   }catch(error){
     console.error(error);
     $("#produtoStatus").innerHTML =
@@ -3352,6 +3595,202 @@ async function carregarProdutosFirebase(){
   }
 }
 
+function abrirProdutoModal(produto=null){
+  $("#produtoModal").classList.remove("hidden");
+
+  $("#produtoModalTitulo").textContent =
+    produto ? "Editar Produto" : "Novo Produto";
+
+  $("#produtoEditId").value = produto?.id || "";
+  $("#produtoEditCodigo").value = produto?.codigo || "";
+  $("#produtoEditDescricao").value = produto?.produto || "";
+  $("#produtoEditGrade1").value = produto?.grade1 || "";
+  $("#produtoEditGrade2").value = produto?.grade2 || "";
+  $("#produtoEditGrade3").value = produto?.grade3 || "";
+  $("#produtoEditUnidade").value = produto?.unidade ?? 1;
+  $("#produtoEditCodigoUnidade").value = produto?.codigoUnidade || "";
+  $("#produtoEditCaixa").value = produto?.caixa ?? 0;
+  $("#produtoEditCodigoCaixa").value = produto?.codigoCaixa || "";
+  $("#produtoEditAtivo").value = produto?.ativo === false ? "false" : "true";
+  $("#produtoEditCodigoUnidadeAntigo").value = produto?.codigoUnidade || "";
+  $("#produtoEditCodigoCaixaAntigo").value = produto?.codigoCaixa || "";
+
+  setTimeout(()=>$("#produtoEditCodigo").focus(),60);
+}
+
+function fecharProdutoModal(){
+  $("#produtoModal").classList.add("hidden");
+}
+
+function abrirEditarProduto(id){
+  const produto = produtosCadastrados.find(p=>p.id===id);
+
+  if(!produto){
+    toast("Produto não encontrado.",false);
+    return;
+  }
+
+  abrirProdutoModal(produto);
+}
+
+function lerFormularioProduto(){
+  const produto = {
+    id: $("#produtoEditId").value.trim(),
+    codigo: $("#produtoEditCodigo").value.trim(),
+    produto: $("#produtoEditDescricao").value.trim(),
+    grade1: $("#produtoEditGrade1").value.trim(),
+    grade2: $("#produtoEditGrade2").value.trim(),
+    grade3: $("#produtoEditGrade3").value.trim(),
+    unidade: Number($("#produtoEditUnidade").value || 1),
+    codigoUnidade: normalizarCodigoBarras($("#produtoEditCodigoUnidade").value),
+    caixa: Number($("#produtoEditCaixa").value || 0),
+    codigoCaixa: normalizarCodigoBarras($("#produtoEditCodigoCaixa").value),
+    ativo: $("#produtoEditAtivo").value === "true",
+    codigoUnidadeAntigo: $("#produtoEditCodigoUnidadeAntigo").value.trim(),
+    codigoCaixaAntigo: $("#produtoEditCodigoCaixaAntigo").value.trim()
+  };
+
+  if(!produto.id){
+    produto.id = criarIdProduto(produto);
+  }
+
+  return produto;
+}
+
+async function salvarProdutoFormulario(){
+  if(!perfilUsuarioAtual || perfilUsuarioAtual.perfil !== "administrador"){
+    toast("Somente administradores podem alterar produtos.",false);
+    return;
+  }
+
+  const produto = lerFormularioProduto();
+
+  if(!produto.codigo || !produto.produto){
+    toast("Preencha o código e a descrição.",false);
+    return;
+  }
+
+  if(produto.codigoUnidade && produto.codigoUnidade === produto.codigoCaixa){
+    toast("O código da unidade e o código da caixa não podem ser iguais.",false);
+    return;
+  }
+
+  const btn = $("#btnSalvarProduto");
+  btn.disabled = true;
+  btn.textContent = "Salvando...";
+
+  try{
+    await window.firebaseSalvarProduto(produto);
+    fecharProdutoModal();
+    toast("Produto salvo com sucesso.");
+    cpProdutosCache = null;
+    await carregarProdutosFirebase();
+  }catch(error){
+    console.error(error);
+    toast(error.message || "Não foi possível salvar o produto.",false);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Salvar Produto";
+  }
+}
+
+async function alternarStatusProduto(id){
+  const produto = produtosCadastrados.find(p=>p.id===id);
+  if(!produto) return;
+
+  const novoStatus = produto.ativo === false;
+
+  const acao = novoStatus ? "reativar" : "inativar";
+
+  if(!confirm(`Deseja ${acao} o produto ${produto.codigo} - ${produto.grade3}?`)){
+    return;
+  }
+
+  try{
+    await window.firebaseAlterarStatusProduto(id,novoStatus,produto);
+    toast(`Produto ${novoStatus ? "reativado" : "inativado"}.`);
+    cpProdutosCache = null;
+    await carregarProdutosFirebase();
+  }catch(error){
+    console.error(error);
+    toast("Não foi possível alterar o status.",false);
+  }
+}
+
+function abrirHistoricoProduto(id){
+  const produto = produtosCadastrados.find(p=>p.id===id);
+  if(!produto) return;
+
+  $("#produtoHistoricoModal").classList.remove("hidden");
+  $("#produtoHistoricoTitulo").textContent =
+    `${produto.codigo} — ${produto.produto} — ${produto.grade1} / ${produto.grade2} / ${produto.grade3}`;
+
+  const historico = Array.isArray(produto.historico)
+    ? [...produto.historico].reverse()
+    : [];
+
+  if(!historico.length){
+    $("#produtoHistoricoLista").innerHTML =
+      `<div class="muted">Nenhuma alteração registrada para este produto.</div>`;
+    return;
+  }
+
+  $("#produtoHistoricoLista").innerHTML = historico.map(item=>{
+    const data = item.data
+      ? new Date(item.data).toLocaleString("pt-BR")
+      : "Sem data";
+
+    return `<div class="historico-item">
+      <strong>${escapeHtml(item.acao || "Alteração")}</strong>
+      <div>${escapeHtml(item.resumo || "")}</div>
+      <div class="meta">
+        ${escapeHtml(item.usuarioEmail || item.usuarioUid || "Usuário não informado")}
+        • ${escapeHtml(data)}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function fecharHistoricoProduto(){
+  $("#produtoHistoricoModal").classList.add("hidden");
+}
+
+function exportarProdutos(){
+  if(!produtosCadastrados.length){
+    toast("Carregue os produtos antes de exportar.",false);
+    return;
+  }
+
+  const cabecalho = [
+    "Código","Produto","Grade 1","Grade 2","Grade 3",
+    "Unidade","Código Unidade","Caixa","Código Caixa","Status"
+  ];
+
+  const linhas = produtosCadastrados.map(p=>[
+    p.codigo,p.produto,p.grade1,p.grade2,p.grade3,
+    p.unidade,p.codigoUnidade,p.caixa,p.codigoCaixa,
+    p.ativo === false ? "INATIVO" : "ATIVO"
+  ]);
+
+  const csv = [cabecalho,...linhas]
+    .map(linha=>linha.map(campo=>{
+      const valor = String(campo ?? "");
+      return `"${valor.replaceAll('"','""')}"`;
+    }).join(";"))
+    .join("\r\n");
+
+  const blob = new Blob(["\ufeff"+csv],{
+    type:"text/csv;charset=utf-8"
+  });
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `cadastro_produtos_${hojeKey()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  toast("Cadastro exportado.");
+}
 
   // Admin
   function salvarEmail(){ LS("email", $("#adEmail").value||""); toast("Email salvo."); }
@@ -3460,11 +3899,33 @@ function limparBateuFuturo(){
     $("#btnImportarProdutos").onclick = importarProdutosFirebase;
     $("#btnLimparProdutos").onclick = ()=>{
       $("#txProdutos").value = "";
-      $("#tbProdutos").innerHTML = "";
-      $("#produtoStatus").textContent = "Nenhum produto preparado para importação.";
+      $("#produtoStatus").textContent = "Área de importação limpa.";
       produtosPreview = [];
     };
     $("#btnCarregarProdutos").onclick = carregarProdutosFirebase;
+    $("#btnNovoProduto").onclick = ()=>abrirProdutoModal();
+    $("#btnExportarProdutos").onclick = exportarProdutos;
+    $("#btnAlternarImportacao").onclick = ()=>{
+      $("#produtoImportBox").classList.toggle("hidden");
+    };
+
+    $("#produtoPesquisa").addEventListener("input",event=>{
+      produtoFiltroAtual = event.currentTarget.value;
+      renderizarProdutos();
+    });
+
+    $("#btnFecharProdutoModal").onclick = fecharProdutoModal;
+    $("#btnCancelarProduto").onclick = fecharProdutoModal;
+    $("#btnSalvarProduto").onclick = salvarProdutoFormulario;
+    $("#btnFecharHistoricoProduto").onclick = fecharHistoricoProduto;
+
+    $("#produtoModal").addEventListener("click",event=>{
+      if(event.target.id === "produtoModal") fecharProdutoModal();
+    });
+
+    $("#produtoHistoricoModal").addEventListener("click",event=>{
+      if(event.target.id === "produtoHistoricoModal") fecharHistoricoProduto();
+    });
 
     [$("#lgUser"), $("#lgPass")].forEach(campo =>{
       campo.addEventListener("keydown", event =>{
@@ -3517,7 +3978,9 @@ montarCalendario();
     serverTimestamp,
     addDoc,
     updateDoc,
-    arrayUnion
+    arrayUnion,
+    deleteDoc,
+    setDoc
   } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -3546,74 +4009,235 @@ montarCalendario();
     return snapshot.exists() ? snapshot.data() : null;
   };
 
-  window.firebaseImportarProdutos = async (produtos, onProgress) => {
-    let totalProdutos = 0;
-    let totalBarras = 0;
-    const limiteLote = 400;
+  function historicoProduto(acao,resumo){
+    return {
+      acao,
+      resumo,
+      usuarioUid:auth.currentUser ? auth.currentUser.uid : null,
+      usuarioEmail:auth.currentUser ? auth.currentUser.email : null,
+      data:new Date().toISOString()
+    };
+  }
 
-    for(let inicio = 0; inicio < produtos.length; inicio += limiteLote){
-      const loteProdutos = produtos.slice(inicio, inicio + limiteLote);
-      const batch = writeBatch(db);
+  async function validarCodigoBarra(barra,produtoId){
+    if(!barra) return;
 
-      for(const produto of loteProdutos){
-        const refProduto = doc(db, "produtos", produto.id);
+    const referencia = doc(db,"codigos_barras",barra);
+    const snapshot = await getDoc(referencia);
 
-        batch.set(refProduto, {
-          codigo: produto.codigo,
-          produto: produto.produto,
-          grade1: produto.grade1,
-          grade2: produto.grade2,
-          grade3: produto.grade3,
-          unidade: produto.unidade,
-          codigoUnidade: produto.codigoUnidade,
-          caixa: produto.caixa,
-          codigoCaixa: produto.codigoCaixa,
-          ativo: produto.ativo !== false,
-          atualizadoEm: serverTimestamp(),
-          atualizadoPor: auth.currentUser ? auth.currentUser.uid : null
-        }, { merge: true });
+    if(snapshot.exists()){
+      const atual = snapshot.data();
 
-        totalProdutos++;
-
-        if(produto.codigoUnidade){
-          batch.set(doc(db, "codigos_barras", produto.codigoUnidade), {
-            produtoId: produto.id,
-            tipo: "unidade",
-            quantidade: produto.unidade || 1,
-            ativo: true,
-            atualizadoEm: serverTimestamp()
-          }, { merge: true });
-          totalBarras++;
-        }
-
-        if(produto.codigoCaixa){
-          batch.set(doc(db, "codigos_barras", produto.codigoCaixa), {
-            produtoId: produto.id,
-            tipo: "caixa",
-            quantidade: produto.caixa || 1,
-            ativo: true,
-            atualizadoEm: serverTimestamp()
-          }, { merge: true });
-          totalBarras++;
-        }
-      }
-
-      await batch.commit();
-
-      if(onProgress){
-        onProgress(
-          Math.min(inicio + loteProdutos.length, produtos.length),
-          produtos.length
+      if(atual.produtoId !== produtoId){
+        throw new Error(
+          `O código de barras ${barra} já pertence a outro produto.`
         );
       }
     }
+  }
 
-    return { produtos: totalProdutos, barras: totalBarras };
+  window.firebaseImportarProdutos = async (produtos,onProgress) => {
+    let totalProdutos = 0;
+    let totalBarras = 0;
+
+    for(let indice=0;indice<produtos.length;indice++){
+      const produto = produtos[indice];
+      const referencia = doc(db,"produtos",produto.id);
+      const anteriorSnapshot = await getDoc(referencia);
+      const anterior = anteriorSnapshot.exists()
+        ? anteriorSnapshot.data()
+        : null;
+
+      await validarCodigoBarra(produto.codigoUnidade,produto.id);
+      await validarCodigoBarra(produto.codigoCaixa,produto.id);
+
+      const batch = writeBatch(db);
+
+      if(
+        anterior?.codigoUnidade
+        && anterior.codigoUnidade !== produto.codigoUnidade
+      ){
+        batch.delete(doc(db,"codigos_barras",anterior.codigoUnidade));
+      }
+
+      if(
+        anterior?.codigoCaixa
+        && anterior.codigoCaixa !== produto.codigoCaixa
+      ){
+        batch.delete(doc(db,"codigos_barras",anterior.codigoCaixa));
+      }
+
+      batch.set(referencia,{
+        codigo:produto.codigo,
+        produto:produto.produto,
+        grade1:produto.grade1,
+        grade2:produto.grade2,
+        grade3:produto.grade3,
+        unidade:produto.unidade,
+        codigoUnidade:produto.codigoUnidade,
+        caixa:produto.caixa,
+        codigoCaixa:produto.codigoCaixa,
+        ativo:produto.ativo !== false,
+        atualizadoEm:serverTimestamp(),
+        atualizadoPor:auth.currentUser ? auth.currentUser.uid : null,
+        historico:arrayUnion(
+          historicoProduto(
+            anterior ? "Importação / atualização" : "Criação por importação",
+            anterior
+              ? "Cadastro atualizado pela importação da planilha."
+              : "Produto criado pela importação da planilha."
+          )
+        )
+      },{merge:true});
+
+      if(produto.codigoUnidade){
+        batch.set(doc(db,"codigos_barras",produto.codigoUnidade),{
+          produtoId:produto.id,
+          tipo:"unidade",
+          quantidade:produto.unidade || 1,
+          ativo:produto.ativo !== false,
+          atualizadoEm:serverTimestamp()
+        },{merge:true});
+        totalBarras++;
+      }
+
+      if(produto.codigoCaixa){
+        batch.set(doc(db,"codigos_barras",produto.codigoCaixa),{
+          produtoId:produto.id,
+          tipo:"caixa",
+          quantidade:produto.caixa || 1,
+          ativo:produto.ativo !== false,
+          atualizadoEm:serverTimestamp()
+        },{merge:true});
+        totalBarras++;
+      }
+
+      await batch.commit();
+      totalProdutos++;
+
+      if(onProgress){
+        onProgress(indice+1,produtos.length);
+      }
+    }
+
+    return {produtos:totalProdutos,barras:totalBarras};
   };
 
   window.firebaseListarProdutos = async () => {
-    const snapshot = await getDocs(collection(db, "produtos"));
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snapshot = await getDocs(collection(db,"produtos"));
+    return snapshot.docs.map(d=>({id:d.id,...d.data()}));
+  };
+
+  window.firebaseSalvarProduto = async (produto) => {
+    const referencia = doc(db,"produtos",produto.id);
+    const snapshot = await getDoc(referencia);
+    const anterior = snapshot.exists() ? snapshot.data() : null;
+
+    await validarCodigoBarra(produto.codigoUnidade,produto.id);
+    await validarCodigoBarra(produto.codigoCaixa,produto.id);
+
+    const batch = writeBatch(db);
+
+    if(
+      produto.codigoUnidadeAntigo
+      && produto.codigoUnidadeAntigo !== produto.codigoUnidade
+    ){
+      batch.delete(doc(db,"codigos_barras",produto.codigoUnidadeAntigo));
+    }
+
+    if(
+      produto.codigoCaixaAntigo
+      && produto.codigoCaixaAntigo !== produto.codigoCaixa
+    ){
+      batch.delete(doc(db,"codigos_barras",produto.codigoCaixaAntigo));
+    }
+
+    batch.set(referencia,{
+      codigo:produto.codigo,
+      produto:produto.produto,
+      grade1:produto.grade1,
+      grade2:produto.grade2,
+      grade3:produto.grade3,
+      unidade:produto.unidade,
+      codigoUnidade:produto.codigoUnidade,
+      caixa:produto.caixa,
+      codigoCaixa:produto.codigoCaixa,
+      ativo:produto.ativo,
+      atualizadoEm:serverTimestamp(),
+      atualizadoPor:auth.currentUser ? auth.currentUser.uid : null,
+      criadoEm:anterior?.criadoEm || serverTimestamp(),
+      historico:arrayUnion(
+        historicoProduto(
+          anterior ? "Edição manual" : "Cadastro manual",
+          anterior
+            ? "Dados do produto alterados pelo formulário de edição."
+            : "Produto cadastrado manualmente."
+        )
+      )
+    },{merge:true});
+
+    if(produto.codigoUnidade){
+      batch.set(doc(db,"codigos_barras",produto.codigoUnidade),{
+        produtoId:produto.id,
+        tipo:"unidade",
+        quantidade:produto.unidade || 1,
+        ativo:produto.ativo,
+        atualizadoEm:serverTimestamp()
+      },{merge:true});
+    }
+
+    if(produto.codigoCaixa){
+      batch.set(doc(db,"codigos_barras",produto.codigoCaixa),{
+        produtoId:produto.id,
+        tipo:"caixa",
+        quantidade:produto.caixa || 1,
+        ativo:produto.ativo,
+        atualizadoEm:serverTimestamp()
+      },{merge:true});
+    }
+
+    await batch.commit();
+  };
+
+  window.firebaseAlterarStatusProduto = async (id,ativo,produto) => {
+    const batch = writeBatch(db);
+    const referencia = doc(db,"produtos",id);
+
+    batch.update(referencia,{
+      ativo,
+      atualizadoEm:serverTimestamp(),
+      atualizadoPor:auth.currentUser ? auth.currentUser.uid : null,
+      historico:arrayUnion(
+        historicoProduto(
+          ativo ? "Produto reativado" : "Produto inativado",
+          ativo
+            ? "O produto voltou a ficar disponível para leitura."
+            : "O produto foi bloqueado para novas leituras."
+        )
+      )
+    });
+
+    if(produto.codigoUnidade){
+      batch.set(doc(db,"codigos_barras",produto.codigoUnidade),{
+        produtoId:id,
+        tipo:"unidade",
+        quantidade:produto.unidade || 1,
+        ativo,
+        atualizadoEm:serverTimestamp()
+      },{merge:true});
+    }
+
+    if(produto.codigoCaixa){
+      batch.set(doc(db,"codigos_barras",produto.codigoCaixa),{
+        produtoId:id,
+        tipo:"caixa",
+        quantidade:produto.caixa || 1,
+        ativo,
+        atualizadoEm:serverTimestamp()
+      },{merge:true});
+    }
+
+    await batch.commit();
   };
 
   window.firebaseBuscarProdutoPorBarra = async (codigoBarra) => {
