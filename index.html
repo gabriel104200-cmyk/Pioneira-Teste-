@@ -57,6 +57,35 @@
     }
     .nav a:hover{background:rgba(16,19,28,.7);border-color:var(--line)}
     .nav a.active{background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.35)}
+
+    .nav a{
+      min-height:42px;
+      gap:10px;
+    }
+    .nav .menu-left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+      flex:1;
+    }
+    .nav .menu-icon{
+      width:20px;
+      text-align:center;
+      flex:0 0 20px;
+      font-size:16px;
+    }
+    .nav .menu-label{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .nav .menu-right{
+      margin-left:auto;
+      white-space:nowrap;
+      flex:0 0 auto;
+    }
+
     .muted{color:var(--muted);font-size:13px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .sep{height:1px;background:var(--line);margin:12px 0}
@@ -368,7 +397,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v4.0</span>
+        <span class="pill" id="ver">v4.1</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -385,17 +414,50 @@
         <div class="sep"></div>
 
         <div class="nav" id="nav">
-          <a href="#inicio" data-view="inicio" data-permissao="inicio" class="active">Início <span class="muted">›</span></a>
-          <a href="#transferencia" data-view="transferencia" data-permissao="transferencia">Transferência <span class="muted">Editar</span></a>
-          <a href="#zeramento" data-view="zeramento" data-permissao="zeramento">Zeramento <span class="muted">Editar</span></a>
-<a href="#requisicao" data-view="requisicao" data-permissao="separacao">Requisições Separação <span class="muted">›</span></a>
-<a href="#requisicaoConf" data-view="requisicaoConf" data-permissao="requisicao_conferencia">Requisições Conferência <span class="muted">›</span></a>
-          <a href="#conferenciaPedidos" data-view="conferenciaPedidos" data-permissao="conferencia_pedidos">✅ Conferência de Pedidos <span class="muted">›</span></a>
-          <a href="#exs" data-view="exs" data-permissao="entrada_saida">⚖️ Entrada x Saída <span class="muted">›</span></a>
-          <a href="#conferencia" data-view="conferencia" data-permissao="conferencia">Conferência <span class="muted">›</span></a>
-          <a href="#producao" data-view="producao" data-permissao="conf_estoque">Conf. Estoque <span class="muted">Abrir</span></a>
-          <a href="#produtos" data-view="produtos" data-permissao="produtos">📦 Produtos <span class="muted">Cadastro</span></a>
-          <a href="#admin" data-view="admin" data-permissao="admin">🛠️ Admin <span class="muted">Controle</span></a>
+          <a href="#inicio" data-view="inicio" data-permissao="inicio" class="active">
+            <span class="menu-left"><span class="menu-icon">🏠</span><span class="menu-label">Início</span></span>
+            <span class="muted menu-right">›</span>
+          </a>
+          <a href="#transferencia" data-view="transferencia" data-permissao="transferencia">
+            <span class="menu-left"><span class="menu-icon">🔁</span><span class="menu-label">Transferência</span></span>
+            <span class="muted menu-right">Editar</span>
+          </a>
+          <a href="#zeramento" data-view="zeramento" data-permissao="zeramento">
+            <span class="menu-left"><span class="menu-icon">🧹</span><span class="menu-label">Zeramento</span></span>
+            <span class="muted menu-right">Editar</span>
+          </a>
+          <a href="#requisicao" data-view="requisicao" data-permissao="separacao">
+            <span class="menu-left"><span class="menu-icon">📋</span><span class="menu-label">Requisições Separação</span></span>
+            <span class="muted menu-right">›</span>
+          </a>
+          <a href="#requisicaoConf" data-view="requisicaoConf" data-permissao="requisicao_conferencia">
+            <span class="menu-left"><span class="menu-icon">📲</span><span class="menu-label">Requisições Conferência</span></span>
+            <span class="muted menu-right">›</span>
+          </a>
+          <a href="#conferenciaPedidos" data-view="conferenciaPedidos" data-permissao="conferencia_pedidos">
+            <span class="menu-left"><span class="menu-icon">✅</span><span class="menu-label">Conferência de Pedidos</span></span>
+            <span class="muted menu-right">›</span>
+          </a>
+          <a href="#exs" data-view="exs" data-permissao="entrada_saida">
+            <span class="menu-left"><span class="menu-icon">⚖️</span><span class="menu-label">Entrada x Saída</span></span>
+            <span class="muted menu-right">›</span>
+          </a>
+          <a href="#conferencia" data-view="conferencia" data-permissao="conferencia">
+            <span class="menu-left"><span class="menu-icon">🚚</span><span class="menu-label">Conferência Expedição</span></span>
+            <span class="muted menu-right">›</span>
+          </a>
+          <a href="#producao" data-view="producao" data-permissao="conf_estoque">
+            <span class="menu-left"><span class="menu-icon">📍</span><span class="menu-label">Conferência Locais de Estoque</span></span>
+            <span class="muted menu-right">Abrir</span>
+          </a>
+          <a href="#produtos" data-view="produtos" data-permissao="produtos">
+            <span class="menu-left"><span class="menu-icon">📦</span><span class="menu-label">Produtos</span></span>
+            <span class="muted menu-right">Cadastro</span>
+          </a>
+          <a href="#admin" data-view="admin" data-permissao="admin">
+            <span class="menu-left"><span class="menu-icon">🛠️</span><span class="menu-label">Admin</span></span>
+            <span class="muted menu-right">Controle</span>
+          </a>
         </div>
 
         <div class="sep"></div>
@@ -443,7 +505,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 4.0 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 4.1 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -744,7 +806,7 @@
 
           <!-- CONFERÊNCIA -->
           <section data-section="conferencia" class="hidden">
-            <h2>✅ Conferência de Locais</h2>
+            <h2>🚚 Conferência Expedição</h2>
            <p class="muted">Cole a planilha de estoque para comparativo de saldo.</p>
 
             <div class="row">
@@ -769,7 +831,7 @@
 
          <!-- CONF. ESTOQUE -->
 <section data-section="producao" class="hidden">
-  <h2>📦 Conf. Estoque</h2>
+  <h2>📍 Conferência Locais de Estoque</h2>
   <p class="muted">Cole a planilha completa do estoque. O sistema vai identificar produtos em local divergente com base no local padrão do próprio código.</p>
 
   <div class="row">
