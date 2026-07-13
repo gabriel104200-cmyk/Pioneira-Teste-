@@ -168,7 +168,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v2.3</span>
+        <span class="pill" id="ver">v2.4</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -242,7 +242,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 2.3 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 2.4 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -1727,27 +1727,41 @@ function desfazerUltimaLeituraReqConf(){const ultima=reqConfHistorico.pop();if(!
 function limparReqConf(confirmar=true){if(confirmar&&reqConfItensMap.size&&!confirm("Limpar todos os itens deste pedido?"))return;reqConfItensMap.clear();reqConfHistorico=[];$("#reqConfPedido").value="";$("#reqConfCliente").value="";$("#reqConfBarcode").value="";$("#reqConfLast").textContent="Aguardando a primeira leitura.";atualizarResumoReqConf(0);focarLeitorReqConf();}
 function montarLinhasReqConf(){const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();if(!pedido||!cliente){toast("Preencha Pedido/Palhete e Cliente/Identificação.",false);return null;}const itens=Array.from(reqConfItensMap.values());if(!itens.length){toast("Bipe ao menos um produto.",false);return null;}return itens.map((item,indice)=>[pedido,cliente,item.codigo,String(indice+1),converterGradeTxt(item.grade1),converterGradeTxt(item.grade2),converterGradeTxt(item.grade3),String(item.quantidade)]);}
 function gerarTxtReqConfBipagem(){
-  const linhas=montarLinhasReqConf();
-  if(!linhas)return;
+  const pedido=$("#reqConfPedido").value.trim();
+  const cliente=$("#reqConfCliente").value.trim();
+  const itens=Array.from(reqConfItensMap.values());
+
+  if(!pedido||!cliente){
+    toast("Preencha Pedido/Palhete e Cliente/Identificação.",false);
+    focarLeitorReqConf();
+    return;
+  }
+
+  if(!itens.length){
+    toast("Bipe ao menos um produto.",false);
+    focarLeitorReqConf();
+    return;
+  }
 
   const local=(prompt("Informe o LOCAL DE RETIRADA desta requisição de conferência:")||"").trim();
+
   if(!local){
     toast("Local de retirada não informado.",false);
     focarLeitorReqConf();
     return;
   }
 
-  const pedido=$("#reqConfPedido").value.trim();
-  const cliente=$("#reqConfCliente").value.trim();
-
   let requisitante=LS("req_requisitante");
+
   if(!requisitante){
     requisitante=(prompt("Informe seu REQUISITANTE (ex.: 26):")||"").trim();
+
     if(!requisitante){
       toast("Requisitante não informado.",false);
       focarLeitorReqConf();
       return;
     }
+
     LS("req_requisitante",requisitante);
   }
 
@@ -1758,33 +1772,55 @@ function gerarTxtReqConfBipagem(){
   const data=`${dd}/${mm}/${yyyy}`;
 
   const out=[];
+
   out.push([
-    "R",data,"1","1",requisitante.trim(),"25",
-    `${pedido}  -  ${cliente}`,pedido,"0","0"
+    "R",
+    data,
+    "1",
+    "1",
+    requisitante.trim(),
+    "25",
+    `${pedido}  -  ${cliente}`,
+    pedido,
+    "0",
+    "0"
   ].join("|"));
 
-  for(const r of linhas){
-    const codigo=String(r[2]||"").trim();
-    const item=String(r[3]||"").trim();
-    const grade1=String(r[4]||"").trim();
-    const grade2=String(r[5]||"").trim();
-    const quantidade=String(r[7]||"").trim();
+  for(const item of itens){
+    const codigo=String(item.codigo||"").trim();
+    const grade1=converterGradeTxt(item.grade1);
+    const grade2=converterGradeTxt(item.grade2);
+    const grade3=converterGradeTxt(item.grade3);
+    const quantidade=String(item.quantidade||"").trim();
+
     if(!codigo||!quantidade)continue;
 
     out.push([
-      "I","P",codigo,item,grade1,grade2,quantidade,"3",local
+      "I",
+      "P",
+      codigo,
+      grade1,
+      grade2,
+      grade3,
+      quantidade,
+      "3",
+      local
     ].join("|"));
   }
 
-  const txt=out.join("\r\n")+"\r\n";
+  const txt=out.join("
+")+"
+";
   const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
   const a=document.createElement("a");
+
   a.href=URL.createObjectURL(blob);
   a.download=`REQ_CONFERENCIA_${data.replaceAll("/","-")}.txt`;
   a.click();
+
   URL.revokeObjectURL(a.href);
 
-  toast(`TXT gerado com local de retirada ${local}.`);
+  toast(`TXT gerado com ${itens.length} item(ns) e local ${local}.`);
   focarLeitorReqConf();
 }
 async function salvarPedidoReqConf(){const linhas=montarLinhasReqConf();if(!linhas)return;if(!window.firebaseSalvarPedidoConferencia){toast("Módulo de pedidos ainda carregando.",false);return;}const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();const itens=Array.from(reqConfItensMap.values()).map(i=>({codigo:i.codigo,produto:i.produto,grade1:i.grade1,grade2:i.grade2,grade3:i.grade3,quantidade:i.quantidade}));const btn=$("#btnReqConfFinalizar");btn.disabled=true;btn.textContent="Salvando...";try{const id=await window.firebaseSalvarPedidoConferencia({pedido,cliente,departamento:"25",tipo:"requisicao_conferencia",status:"finalizado",itens});toast(`Pedido salvo com sucesso. Registro: ${id}`);LSJ("tab_reqConf",linhas);}catch(e){console.error(e);toast("Não foi possível salvar o pedido.",false);}finally{btn.disabled=false;btn.textContent="Salvar pedido";focarLeitorReqConf();}}
