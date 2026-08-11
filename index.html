@@ -406,7 +406,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v4.2</span>
+        <span class="pill" id="ver">v4.3</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -514,7 +514,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 4.2 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 4.3 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -3030,8 +3030,7 @@ function gerarRomaneioConferencia(){
 
   const totalEsperado = itens.reduce((s,i)=>s+Number(i.quantidadeEsperada||0),0);
   const totalConferido = itens.reduce((s,i)=>s+Number(i.quantidadeConferida||0),0);
-  const divergencias = itens.filter(i=>Number(i.quantidadeEsperada||0)!==Number(i.quantidadeConferida||0)).length;
-  const resultadoGeral = divergencias === 0 ? "CONFERÊNCIA OK" : "CONFERÊNCIA COM DIVERGÊNCIA";
+  const resultadoGeral = "CONFERIDO";
 
   const linhas = itens.map(item=>{
     const ok = Number(item.quantidadeEsperada||0) === Number(item.quantidadeConferida||0);
@@ -3043,7 +3042,6 @@ function gerarRomaneioConferencia(){
       <td>${escapeHtml(item.grade3)}</td>
       <td class="num">${item.quantidadeEsperada}</td>
       <td class="num">${item.quantidadeConferida}</td>
-      <td class="${ok?"ok":"erro"}">${ok?"OK":"DIVERGENTE"}</td>
     </tr>`;
   }).join("");
 
@@ -3135,19 +3133,17 @@ function gerarRomaneioConferencia(){
         <div class="valor">${itens.length}</div>
       </div>
       <div class="campo">
-        <div class="label">Situação</div>
+        <div class="label">Status</div>
         <div class="valor">${resultadoGeral}</div>
       </div>
     </div>
 
-    <div class="resumo">
+    <div class="resumo" style="grid-template-columns:repeat(2,1fr)">
       <div class="box"><div>Total esperado</div><div class="n">${totalEsperado}</div></div>
       <div class="box"><div>Total conferido</div><div class="n">${totalConferido}</div></div>
-      <div class="box"><div>Volumes</div><div class="n">${volumes || 0}</div></div>
-      <div class="box"><div>Divergências</div><div class="n">${divergencias}</div></div>
     </div>
 
-    <div class="resultado">${resultadoGeral}</div>
+    <div class="resultado">STATUS: ${resultadoGeral}</div>
 
     <table>
       <thead>
@@ -3159,7 +3155,6 @@ function gerarRomaneioConferencia(){
           <th>Grade 3</th>
           <th>Esperado</th>
           <th>Conferido</th>
-          <th>Status</th>
         </tr>
       </thead>
       <tbody>${linhas}</tbody>
