@@ -406,7 +406,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v4.3</span>
+        <span class="pill" id="ver">v4.4</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -514,7 +514,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 4.3 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 4.4 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -3057,7 +3057,7 @@ function gerarRomaneioConferencia(){
     <meta charset="utf-8">
     <title>Romaneio de Conferência - ${escapeHtml(cpPedidoAtual.pedido||"")}</title>
     <style>
-      @page{size:A4 landscape;margin:12mm}
+      @page{size:A4 portrait;margin:12mm}
       *{box-sizing:border-box}
       body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:11px}
       .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}
@@ -3066,17 +3066,17 @@ function gerarRomaneioConferencia(){
       .doc-title{text-align:right}
       .doc-title strong{font-size:17px}
       .doc-title div{margin-top:3px;color:#555}
-      .dados{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+      .dados{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:10px}
       .campo{border:1px solid #aaa;padding:7px;min-height:46px}
       .campo .label{font-size:9px;color:#666;text-transform:uppercase;margin-bottom:4px}
       .campo .valor{font-size:12px;font-weight:700}
       .volumes{font-size:19px!important}
-      .resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0}
+      .resumo{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}
       .resumo .box{border:1px solid #aaa;padding:8px;text-align:center}
       .resumo .n{font-size:18px;font-weight:800;margin-top:3px}
       .resultado{padding:9px;border:2px solid #111;text-align:center;font-size:15px;font-weight:800;margin-bottom:10px}
-      table{width:100%;border-collapse:collapse;font-size:9.5px}
-      th,td{border:1px solid #999;padding:5px;text-align:left}
+      table{width:100%;border-collapse:collapse;font-size:8.4px;table-layout:fixed}
+      th,td{border:1px solid #999;padding:4px;text-align:left;word-wrap:break-word;overflow-wrap:anywhere}
       th{background:#e9e9e9;font-size:9px;text-transform:uppercase}
       td.num{text-align:center;font-weight:700}
       td.ok{font-weight:700;text-align:center}
@@ -3148,13 +3148,13 @@ function gerarRomaneioConferencia(){
     <table>
       <thead>
         <tr>
-          <th>Código</th>
-          <th>Descrição</th>
-          <th>Grade 1</th>
-          <th>Grade 2</th>
-          <th>Grade 3</th>
-          <th>Esperado</th>
-          <th>Conferido</th>
+          <th style="width:11%">Código</th>
+          <th style="width:34%">Descrição</th>
+          <th style="width:12%">Grade 1</th>
+          <th style="width:12%">Grade 2</th>
+          <th style="width:11%">Grade 3</th>
+          <th style="width:10%">Esperado</th>
+          <th style="width:10%">Conferido</th>
         </tr>
       </thead>
       <tbody>${linhas}</tbody>
