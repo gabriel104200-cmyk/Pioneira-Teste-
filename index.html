@@ -440,7 +440,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v4.6</span>
+        <span class="pill" id="ver">v4.7</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -548,7 +548,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 4.6 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 4.7 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -690,7 +690,7 @@
   </div>
   <div class="row" style="margin-top:14px">
     <button class="btn good" id="btnReqConfFinalizar">Salvar pedido</button>
-    <button class="btn primary" id="btnReqConfTxt">Gerar TXT</button>
+    <button class="btn primary" id="btnReqConfTxt">Gerar TXT + Movimentações</button>
     <button class="btn" id="btnReqConfDesfazer">Desfazer última leitura</button>
     <button class="btn warn" id="btnReqConfLimpar">Limpar pedido</button>
   </div>
@@ -1113,7 +1113,7 @@
           <div class="row" style="justify-content:space-between"><div><h3 style="margin:0">🧩 Insumos do produto</h3><div class="muted tiny">Cadastre como cada insumo consome as grades do produto final.</div></div><button class="btn good" type="button" id="btnNovoInsumoEstrutura">➕ Adicionar Insumo</button></div>
           <div id="estruturaLista" class="estrutura-table-wrap"></div>
         </div>
-        <div class="estrutura-preview"><strong>Exemplo</strong><br>Produto final: Masculino / Preto / G.<br>Se Grade 1 do insumo ← Grade 2 do produto, Grade 2 ← Grade 1 e Grade 3 ← Grade 3, o insumo será: <strong>Preto / Masculino / G</strong>.</div>
+        <div class="estrutura-preview"><strong>Como funcionará a baixa</strong><br>Informe diretamente as grades de cada insumo. Se forem bipadas <strong>20 unidades</strong> do produto acabado, cada insumo cadastrado terá <strong>20 unidades baixadas</strong>, usando exatamente as grades e o local informados no cadastro do insumo.</div>
         <div class="modal-footer"><button class="btn" type="button" id="btnVoltarDadosProduto">Voltar para Dados</button><button class="btn good" type="button" id="btnSalvarEstruturaProduto">Salvar Estrutura</button></div>
       </div>
     </div>
@@ -1127,14 +1127,11 @@
       <div class="modal-grid">
         <div><label class="muted">Código do insumo</label><input id="estruturaInsumoCodigo"></div>
         <div><label class="muted">Descrição</label><input id="estruturaInsumoDescricao"></div>
-        <div><label class="muted">Quantidade por produto</label><input id="estruturaInsumoQtd" type="number" min="0.001" step="0.001" value="1"></div>
         <div><label class="muted">Local de saída do insumo</label><input id="estruturaInsumoLocal"></div>
-        <div><label class="muted">Grade 1 do insumo recebe</label><select id="estruturaMapG1"><option value="g1">Grade 1 do produto</option><option value="g2">Grade 2 do produto</option><option value="g3">Grade 3 do produto</option><option value="fixo">Valor fixo</option><option value="vazio">Vazio</option></select></div>
-        <div><label class="muted">Valor fixo Grade 1</label><input id="estruturaFixG1"></div>
-        <div><label class="muted">Grade 2 do insumo recebe</label><select id="estruturaMapG2"><option value="g1">Grade 1 do produto</option><option value="g2">Grade 2 do produto</option><option value="g3">Grade 3 do produto</option><option value="fixo">Valor fixo</option><option value="vazio">Vazio</option></select></div>
-        <div><label class="muted">Valor fixo Grade 2</label><input id="estruturaFixG2"></div>
-        <div><label class="muted">Grade 3 do insumo recebe</label><select id="estruturaMapG3"><option value="g1">Grade 1 do produto</option><option value="g2">Grade 2 do produto</option><option value="g3">Grade 3 do produto</option><option value="fixo">Valor fixo</option><option value="vazio">Vazio</option></select></div>
-        <div><label class="muted">Valor fixo Grade 3</label><input id="estruturaFixG3"></div>
+        <div><label class="muted">Grade 1 do insumo</label><input id="estruturaInsumoG1" placeholder="Ex.: PRE"></div>
+        <div><label class="muted">Grade 2 do insumo</label><input id="estruturaInsumoG2" placeholder="Ex.: M"></div>
+        <div><label class="muted">Grade 3 do insumo</label><input id="estruturaInsumoG3" placeholder="Ex.: G"></div>
+        <div class="full"><div class="muted tiny">A quantidade baixada deste insumo será sempre igual ao total do produto acabado bipado na Requisição Conferência.</div></div>
       </div>
       <div class="modal-footer"><button class="btn" id="btnCancelarInsumoEstrutura">Cancelar</button><button class="btn good" id="btnSalvarInsumoEstrutura">Salvar Insumo</button></div>
     </div>
@@ -3626,6 +3623,22 @@ async function finalizarRequisicaoSeparacao(){
   }
 }
 
+function numeroBRReqConf(valor){
+  const s=String(valor??"0").trim().replace(/\./g,"").replace(",",".");
+  const n=Number(s);
+  return Number.isFinite(n)?n:0;
+}
+function formatarNumeroBRReqConf(valor){return Number(valor||0).toFixed(2).replace(".",",");}
+function baixarArquivoTxtReqConf(nome,linhas){
+  const txt=linhas.join("\r\n")+"\r\n";
+  const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=nome;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 // ---------- Requisição Conferência por bipagem ----------
 let reqConfItensMap = new Map();
 let reqConfHistorico = [];
@@ -3641,7 +3654,7 @@ async function processarCodigoReqConf(codigo){if(reqConfLeituraEmAndamento)retur
 function desfazerUltimaLeituraReqConf(){const ultima=reqConfHistorico.pop();if(!ultima){toast("Nenhuma leitura para desfazer.",false);return focarLeitorReqConf();}const item=reqConfItensMap.get(ultima.produtoId);if(item){item.quantidade-=ultima.quantidade;if(item.quantidade<=0)reqConfItensMap.delete(ultima.produtoId);else reqConfItensMap.set(ultima.produtoId,item);}$("#reqConfLast").textContent="Última leitura desfeita.";atualizarResumoReqConf(-ultima.quantidade);focarLeitorReqConf();}
 function limparReqConf(confirmar=true){if(confirmar&&reqConfItensMap.size&&!confirm("Limpar todos os itens deste pedido?"))return;reqConfItensMap.clear();reqConfHistorico=[];$("#reqConfPedido").value="";$("#reqConfCliente").value="";$("#reqConfBarcode").value="";$("#reqConfLast").textContent="Aguardando a primeira leitura.";atualizarResumoReqConf(0);focarLeitorReqConf();}
 function montarLinhasReqConf(){const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();if(!pedido||!cliente){toast("Preencha Pedido/Palhete e Cliente/Identificação.",false);return null;}const itens=Array.from(reqConfItensMap.values());if(!itens.length){toast("Bipe ao menos um produto.",false);return null;}return itens.map((item,indice)=>[pedido,cliente,item.codigo,String(indice+1),converterGradeTxt(item.grade1),converterGradeTxt(item.grade2),converterGradeTxt(item.grade3),String(item.quantidade)]);}
-function gerarTxtReqConfBipagem(){
+async function gerarTxtReqConfBipagem(){
   const pedido=$("#reqConfPedido").value.trim();
   const cliente=$("#reqConfCliente").value.trim();
   const itens=Array.from(reqConfItensMap.values());
@@ -3658,26 +3671,20 @@ function gerarTxtReqConfBipagem(){
     return;
   }
 
-  const local=(prompt("Informe o LOCAL DE RETIRADA desta requisição de conferência:")||"").trim();
-
-  if(!local){
-    toast("Local de retirada não informado.",false);
-    focarLeitorReqConf();
-    return;
-  }
-
   let requisitante=LS("req_requisitante");
-
   if(!requisitante){
     requisitante=(prompt("Informe seu REQUISITANTE (ex.: 26):")||"").trim();
-
     if(!requisitante){
       toast("Requisitante não informado.",false);
       focarLeitorReqConf();
       return;
     }
-
     LS("req_requisitante",requisitante);
+  }
+
+  if(!window.firebaseBuscarProdutoPorId){
+    toast("Módulo do Firebase ainda está carregando.",false);
+    return;
   }
 
   const hoje=new Date();
@@ -3685,55 +3692,154 @@ function gerarTxtReqConfBipagem(){
   const mm=String(hoje.getMonth()+1).padStart(2,"0");
   const yyyy=hoje.getFullYear();
   const data=`${dd}/${mm}/${yyyy}`;
+  const dataArquivo=data.replaceAll("/","-");
 
-  const out=[];
-
-  out.push([
-    "R",
-    data,
-    "1",
-    "1",
-    requisitante.trim(),
-    "25",
-    `${pedido}  -  ${cliente}`,
-    pedido,
-    "0",
-    "0"
-  ].join("|"));
+  const produtosCompletos=[];
+  const problemas=[];
 
   for(const item of itens){
-    const codigo=String(item.codigo||"").trim();
-    const grade1=converterGradeTxt(item.grade1);
-    const grade2=converterGradeTxt(item.grade2);
-    const grade3=converterGradeTxt(item.grade3);
-    const quantidade=String(item.quantidade||"").trim();
+    const produto=await window.firebaseBuscarProdutoPorId(item.produtoId);
 
-    if(!codigo||!quantidade)continue;
+    if(!produto){
+      problemas.push(`${item.codigo}: produto não encontrado no Firebase`);
+      continue;
+    }
 
-    out.push([
-      "I",
-      "P",
-      codigo,
-      grade1,
-      grade2,
-      grade3,
-      quantidade,
+    const estrutura=produto.estrutura||{};
+    const insumos=Array.isArray(estrutura.insumos)?estrutura.insumos:[];
+
+    if(!estrutura.localEntrada) problemas.push(`${item.codigo} ${item.grade3}: sem Local de Entrada`);
+    if(!estrutura.localSaidaReq) problemas.push(`${item.codigo} ${item.grade3}: sem Local de Saída para Requisição`);
+    if(!insumos.length) problemas.push(`${item.codigo} ${item.grade3}: nenhum insumo cadastrado`);
+
+    for(const insumo of insumos){
+      if(!insumo.codigo||!insumo.localSaida){
+        problemas.push(`${item.codigo} ${item.grade3}: há insumo sem código ou local de saída`);
+      }
+    }
+
+    produtosCompletos.push({item,produto,estrutura});
+  }
+
+  if(problemas.length){
+    alert("Estruturas incompletas:\\n\\n"+problemas.join("\\n"));
+    toast("Corrija a Estrutura / Movimentação dos produtos indicados.",false);
+    return;
+  }
+
+  // Arquivo 1 - Requisição Conferência
+  const requisicao=[];
+  requisicao.push([
+    "R",data,"1","1",requisitante.trim(),"25",
+    `${pedido}  -  ${cliente}`,pedido,"0","0"
+  ].join("|"));
+
+  for(const {item,estrutura} of produtosCompletos){
+    requisicao.push([
+      "I","P",
+      String(item.codigo||"").trim(),
+      converterGradeTxt(item.grade1),
+      converterGradeTxt(item.grade2),
+      converterGradeTxt(item.grade3),
+      String(item.quantidade),
       "3",
-      local
+      String(estrutura.localSaidaReq||"").trim()
     ].join("|"));
   }
 
-  const txt=out.join("\r\n")+"\r\n";
-  const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
-  const a=document.createElement("a");
+  // Arquivo 2 - Entrada/Saída da Produção
+  const movimentosMap=new Map();
 
-  a.href=URL.createObjectURL(blob);
-  a.download=`REQ_CONFERENCIA_${data.replaceAll("/","-")}.txt`;
-  a.click();
+  function adicionarMovimento(tipo,filial,codigo,g1,g2,g3,local,qtd,precoUnit){
+    const chave=[filial,tipo,codigo,g1,g2,g3,local,precoUnit].join("|");
 
-  URL.revokeObjectURL(a.href);
+    if(!movimentosMap.has(chave)){
+      movimentosMap.set(chave,{tipo,filial,codigo,g1,g2,g3,local,qtd:0,precoUnit});
+    }
 
-  toast(`TXT gerado com ${itens.length} item(ns) e local ${local}.`);
+    movimentosMap.get(chave).qtd += Number(qtd||0);
+  }
+
+  for(const {item,estrutura} of produtosCompletos){
+    const prefixoFilial=`M${String(estrutura.filial||"1")}`;
+    const precoUnit=String(estrutura.precoUnit||"0,01").trim()||"0,01";
+    const qtdBipada=Number(item.quantidade||0);
+
+    // Saída dos insumos: SEMPRE igual ao total bipado do produto acabado.
+    for(const insumo of estrutura.insumos){
+      adicionarMovimento(
+        "S",
+        prefixoFilial,
+        String(insumo.codigo||"").trim(),
+        converterGradeTxt(insumo.grade1),
+        converterGradeTxt(insumo.grade2),
+        converterGradeTxt(insumo.grade3),
+        String(insumo.localSaida||"").trim(),
+        qtdBipada,
+        precoUnit
+      );
+    }
+
+    // Entrada do produto acabado.
+    adicionarMovimento(
+      "E",
+      prefixoFilial,
+      String(item.codigo||"").trim(),
+      converterGradeTxt(item.grade1),
+      converterGradeTxt(item.grade2),
+      converterGradeTxt(item.grade3),
+      String(estrutura.localEntrada||"").trim(),
+      qtdBipada,
+      precoUnit
+    );
+  }
+
+  const movimentos=[];
+
+  for(const mov of movimentosMap.values()){
+    const total=mov.qtd*numeroBRReqConf(mov.precoUnit);
+
+    movimentos.push([
+      mov.filial,
+      mov.tipo,
+      data,
+      mov.codigo,
+      mov.g1,
+      mov.g2,
+      mov.g3,
+      mov.local,
+      String(mov.qtd).replace(".",","),
+      mov.precoUnit,
+      formatarNumeroBRReqConf(total),
+      mov.tipo==="E" ? "1905" : "5906"
+    ].join("|"));
+  }
+
+  const totalBipado=itens.reduce((s,i)=>s+Number(i.quantidade||0),0);
+  const totalBaixas=Array.from(movimentosMap.values())
+    .filter(m=>m.tipo==="S")
+    .reduce((s,m)=>s+m.qtd,0);
+
+  if(!confirm(
+    `CONFIRMAR GERAÇÃO?\\n\\n`+
+    `Pedido/Palhete: ${pedido}\\n`+
+    `Total de produtos acabados bipados: ${totalBipado}\\n`+
+    `Total de baixas de insumos: ${totalBaixas}\\n\\n`+
+    `Serão gerados 2 arquivos:\\n`+
+    `1. Requisição de Conferência\\n`+
+    `2. Entrada/Saída da Produção`
+  )){
+    focarLeitorReqConf();
+    return;
+  }
+
+  baixarArquivoTxtReqConf(`REQ_CONFERENCIA_${dataArquivo}.txt`,requisicao);
+
+  setTimeout(()=>{
+    baixarArquivoTxtReqConf(`MOV_PRODUCAO_${dataArquivo}.txt`,movimentos);
+  },300);
+
+  toast(`Requisição e movimentações geradas com sucesso.`);
   focarLeitorReqConf();
 }
 async function salvarPedidoReqConf(){const linhas=montarLinhasReqConf();if(!linhas)return;if(!window.firebaseSalvarPedidoConferencia){toast("Módulo de pedidos ainda carregando.",false);return;}const pedido=$("#reqConfPedido").value.trim(),cliente=$("#reqConfCliente").value.trim();const itens=Array.from(reqConfItensMap.values()).map(i=>({codigo:i.codigo,produto:i.produto,grade1:i.grade1,grade2:i.grade2,grade3:i.grade3,quantidade:i.quantidade}));const btn=$("#btnReqConfFinalizar");btn.disabled=true;btn.textContent="Salvando...";try{const id=await window.firebaseSalvarPedidoConferencia({pedido,cliente,departamento:"25",tipo:"requisicao_conferencia",status:"finalizado",itens});toast(`Pedido salvo com sucesso. Registro: ${id}`);LSJ("tab_reqConf",linhas);}catch(e){console.error(e);toast("Não foi possível salvar o pedido.",false);}finally{btn.disabled=false;btn.textContent="Salvar pedido";focarLeitorReqConf();}}
@@ -3747,11 +3853,73 @@ let estruturaProdutoAtual = {localEntrada:"",localSaidaReq:"",filial:"1",precoUn
 function abrirAbaProduto(nome){const dados=nome==="dados";$("#produtoAbaDados").classList.toggle("hidden",!dados);$("#produtoAbaEstrutura").classList.toggle("hidden",dados);$("#btnAbaProdutoDados").classList.toggle("active",dados);$("#btnAbaProdutoEstrutura").classList.toggle("active",!dados);} 
 function carregarEstruturaNoFormulario(produto){const e=produto?.estrutura||{};estruturaProdutoAtual={localEntrada:e.localEntrada||"",localSaidaReq:e.localSaidaReq||"",filial:e.filial||"1",precoUnit:e.precoUnit||"0,01",insumos:Array.isArray(e.insumos)?JSON.parse(JSON.stringify(e.insumos)):[]};$("#estruturaLocalEntrada").value=estruturaProdutoAtual.localEntrada;$("#estruturaLocalSaidaReq").value=estruturaProdutoAtual.localSaidaReq;$("#estruturaFilial").value=estruturaProdutoAtual.filial;$("#estruturaPrecoUnit").value=estruturaProdutoAtual.precoUnit;renderizarEstruturaProduto();}
 function coletarEstruturaCabecalho(){estruturaProdutoAtual.localEntrada=$("#estruturaLocalEntrada").value.trim();estruturaProdutoAtual.localSaidaReq=$("#estruturaLocalSaidaReq").value.trim();estruturaProdutoAtual.filial=$("#estruturaFilial").value;estruturaProdutoAtual.precoUnit=$("#estruturaPrecoUnit").value.trim()||"0,01";}
-function textoMapeamento(m,f){if(m==="g1")return "Grade 1 produto";if(m==="g2")return "Grade 2 produto";if(m==="g3")return "Grade 3 produto";if(m==="fixo")return `Fixo: ${f||""}`;return "Vazio";}
-function renderizarEstruturaProduto(){const ins=estruturaProdutoAtual.insumos||[];if(!ins.length){$("#estruturaLista").innerHTML='<div class="muted" style="padding:12px">Nenhum insumo cadastrado para este produto.</div>';return;}let h='<table><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th><th>Local saída</th><th>Grade 1 insumo</th><th>Grade 2 insumo</th><th>Grade 3 insumo</th><th>Ações</th></tr></thead><tbody>';ins.forEach((i,x)=>{h+=`<tr><td>${escapeHtml(i.codigo||"")}</td><td>${escapeHtml(i.descricao||"")}</td><td>${escapeHtml(String(i.quantidade||1))}</td><td>${escapeHtml(i.localSaida||"")}</td><td>${escapeHtml(textoMapeamento(i.mapG1,i.fixG1))}</td><td>${escapeHtml(textoMapeamento(i.mapG2,i.fixG2))}</td><td>${escapeHtml(textoMapeamento(i.mapG3,i.fixG3))}</td><td><div class="estrutura-actions"><button class="btn primary" onclick="editarInsumoEstrutura(${x})">✏️ Editar</button><button class="btn warn" onclick="removerInsumoEstrutura(${x})">🗑️ Remover</button></div></td></tr>`;});h+='</tbody></table>';$("#estruturaLista").innerHTML=h;}
-function abrirInsumoEstrutura(i=null,x=-1){$("#estruturaInsumoModal").classList.remove("hidden");$("#estruturaInsumoTitulo").textContent=i?"Editar Insumo":"Adicionar Insumo";$("#estruturaInsumoIndex").value=x;$("#estruturaInsumoCodigo").value=i?.codigo||"";$("#estruturaInsumoDescricao").value=i?.descricao||"";$("#estruturaInsumoQtd").value=i?.quantidade??1;$("#estruturaInsumoLocal").value=i?.localSaida||"";$("#estruturaMapG1").value=i?.mapG1||"g1";$("#estruturaFixG1").value=i?.fixG1||"";$("#estruturaMapG2").value=i?.mapG2||"g2";$("#estruturaFixG2").value=i?.fixG2||"";$("#estruturaMapG3").value=i?.mapG3||"g3";$("#estruturaFixG3").value=i?.fixG3||"";}
-function fecharInsumoEstrutura(){$("#estruturaInsumoModal").classList.add("hidden");} function editarInsumoEstrutura(x){abrirInsumoEstrutura(estruturaProdutoAtual.insumos[x],x);} function removerInsumoEstrutura(x){const i=estruturaProdutoAtual.insumos[x];if(!confirm(`Remover o insumo ${i.codigo} da estrutura?`))return;estruturaProdutoAtual.insumos.splice(x,1);renderizarEstruturaProduto();}
-function salvarInsumoEstrutura(){const x=Number($("#estruturaInsumoIndex").value);const i={codigo:$("#estruturaInsumoCodigo").value.trim(),descricao:$("#estruturaInsumoDescricao").value.trim(),quantidade:Number($("#estruturaInsumoQtd").value||1),localSaida:$("#estruturaInsumoLocal").value.trim(),mapG1:$("#estruturaMapG1").value,fixG1:$("#estruturaFixG1").value.trim(),mapG2:$("#estruturaMapG2").value,fixG2:$("#estruturaFixG2").value.trim(),mapG3:$("#estruturaMapG3").value,fixG3:$("#estruturaFixG3").value.trim()};if(!i.codigo||i.quantidade<=0||!i.localSaida){toast("Preencha código, quantidade e local de saída do insumo.",false);return;}if(x>=0)estruturaProdutoAtual.insumos[x]=i;else estruturaProdutoAtual.insumos.push(i);fecharInsumoEstrutura();renderizarEstruturaProduto();}
+function renderizarEstruturaProduto(){
+  const ins=estruturaProdutoAtual.insumos||[];
+  if(!ins.length){
+    $("#estruturaLista").innerHTML='<div class="muted" style="padding:12px">Nenhum insumo cadastrado para este produto.</div>';
+    return;
+  }
+
+  let h='<table><thead><tr><th>Código</th><th>Descrição</th><th>Local saída</th><th>Grade 1</th><th>Grade 2</th><th>Grade 3</th><th>Qtd. baixada</th><th>Ações</th></tr></thead><tbody>';
+
+  ins.forEach((i,x)=>{
+    h+=`<tr>
+      <td>${escapeHtml(i.codigo||"")}</td>
+      <td>${escapeHtml(i.descricao||"")}</td>
+      <td>${escapeHtml(i.localSaida||"")}</td>
+      <td>${escapeHtml(i.grade1||"")}</td>
+      <td>${escapeHtml(i.grade2||"")}</td>
+      <td>${escapeHtml(i.grade3||"")}</td>
+      <td><span class="estrutura-badge ok">Igual ao total bipado</span></td>
+      <td><div class="estrutura-actions">
+        <button class="btn primary" onclick="editarInsumoEstrutura(${x})">✏️ Editar</button>
+        <button class="btn warn" onclick="removerInsumoEstrutura(${x})">🗑️ Remover</button>
+      </div></td>
+    </tr>`;
+  });
+
+  h+='</tbody></table>';
+  $("#estruturaLista").innerHTML=h;
+}
+
+function abrirInsumoEstrutura(i=null,x=-1){
+  $("#estruturaInsumoModal").classList.remove("hidden");
+  $("#estruturaInsumoTitulo").textContent=i?"Editar Insumo":"Adicionar Insumo";
+  $("#estruturaInsumoIndex").value=x;
+  $("#estruturaInsumoCodigo").value=i?.codigo||"";
+  $("#estruturaInsumoDescricao").value=i?.descricao||"";
+  $("#estruturaInsumoLocal").value=i?.localSaida||"";
+  $("#estruturaInsumoG1").value=i?.grade1||"";
+  $("#estruturaInsumoG2").value=i?.grade2||"";
+  $("#estruturaInsumoG3").value=i?.grade3||"";
+}
+
+function fecharInsumoEstrutura(){$("#estruturaInsumoModal").classList.add("hidden");}
+function editarInsumoEstrutura(x){abrirInsumoEstrutura(estruturaProdutoAtual.insumos[x],x);}
+function removerInsumoEstrutura(x){const i=estruturaProdutoAtual.insumos[x];if(!confirm(`Remover o insumo ${i.codigo} da estrutura?`))return;estruturaProdutoAtual.insumos.splice(x,1);renderizarEstruturaProduto();}
+
+function salvarInsumoEstrutura(){
+  const x=Number($("#estruturaInsumoIndex").value);
+  const i={
+    codigo:$("#estruturaInsumoCodigo").value.trim(),
+    descricao:$("#estruturaInsumoDescricao").value.trim(),
+    localSaida:$("#estruturaInsumoLocal").value.trim(),
+    grade1:$("#estruturaInsumoG1").value.trim(),
+    grade2:$("#estruturaInsumoG2").value.trim(),
+    grade3:$("#estruturaInsumoG3").value.trim()
+  };
+
+  if(!i.codigo||!i.localSaida){
+    toast("Preencha código e local de saída do insumo.",false);
+    return;
+  }
+
+  if(x>=0) estruturaProdutoAtual.insumos[x]=i;
+  else estruturaProdutoAtual.insumos.push(i);
+
+  fecharInsumoEstrutura();
+  renderizarEstruturaProduto();
+}
 async function salvarEstruturaProduto(){const id=$("#produtoEditId").value.trim();if(!id){toast("Salve primeiro os dados do produto antes de cadastrar a estrutura.",false);abrirAbaProduto("dados");return;}coletarEstruturaCabecalho();try{await window.firebaseSalvarEstruturaProduto(id,estruturaProdutoAtual);toast("Estrutura do produto salva com sucesso.");cpProdutosCache=null;await carregarProdutosFirebase();}catch(e){console.error(e);toast("Não foi possível salvar a estrutura.",false);}}
 function normalizarCodigoBarras(valor){
   return String(valor ?? "").trim().replace(/\s+/g, "");
