@@ -389,6 +389,29 @@
     .cp-volume-box input{font-size:20px;font-weight:800;text-align:center}
     @media(max-width:700px){.cp-volume-box{grid-template-columns:1fr}}
 
+
+    .cp-mult-box{
+      margin-top:12px;padding:13px;border:1px solid var(--line);
+      border-radius:14px;background:rgba(16,19,28,.55)
+    }
+    .cp-mult-grid{
+      display:grid;grid-template-columns:190px 1fr;gap:12px;align-items:end
+    }
+    .cp-mult-buttons{display:flex;gap:7px;flex-wrap:wrap}
+    .cp-mult-buttons .btn.active{
+      background:linear-gradient(135deg,var(--accent),#4c1d95);
+      border-color:transparent
+    }
+    .cp-status.cancelled{
+      color:#fecaca;background:rgba(239,68,68,.12);
+      border-color:rgba(239,68,68,.35)
+    }
+    .cp-cancel-info{
+      margin-top:12px;padding:12px;border:1px solid rgba(239,68,68,.4);
+      border-radius:12px;background:rgba(239,68,68,.08);color:#fecaca
+    }
+    @media(max-width:700px){.cp-mult-grid{grid-template-columns:1fr}}
+
     .hidden{display:none}
   </style>
 </head>
@@ -406,7 +429,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v4.4</span>
+        <span class="pill" id="ver">v4.5</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -514,7 +537,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 4.4 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 4.5 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -702,6 +725,7 @@
                 </div>
                 <div class="row">
                   <button class="btn" id="btnCpRomaneio">Gerar Romaneio</button>
+                  <button class="btn warn" id="btnCpCancelar">Cancelar Conferência</button>
                   <button class="btn" id="btnCpVoltar">← Voltar aos pedidos</button>
                 </div>
               </div>
@@ -732,7 +756,28 @@
               </div>
 
               <div id="cpScanArea" class="cp-scan-box">
-                <label class="muted" for="cpBarcode">Código de barras</label>
+                <div class="cp-mult-box">
+                  <div class="cp-mult-grid">
+                    <div>
+                      <label class="muted" for="cpMultiplicador">Multiplicador da próxima leitura</label>
+                      <input id="cpMultiplicador" type="number" min="1" step="1" value="1">
+                    </div>
+                    <div>
+                      <div class="muted" style="margin-bottom:7px">Atalhos</div>
+                      <div class="cp-mult-buttons">
+                        <button class="btn active" type="button" data-cp-mult="1">×1</button>
+                        <button class="btn" type="button" data-cp-mult="5">×5</button>
+                        <button class="btn" type="button" data-cp-mult="10">×10</button>
+                        <button class="btn" type="button" data-cp-mult="20">×20</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="muted tiny" style="margin-top:8px">
+                    Exemplo: selecione ×10 e bipe uma unidade. O sistema lançará 10 unidades e voltará automaticamente para ×1.
+                  </div>
+                </div>
+
+                <label class="muted" for="cpBarcode" style="display:block;margin-top:12px">Código de barras</label>
                 <input id="cpBarcode" class="cp-scan-input" inputmode="numeric" autocomplete="off" placeholder="Bipe o produto — leitura automática">
                 <div id="cpUltimaLeitura" class="cp-last muted">Aguardando a primeira leitura.</div>
                 <div id="cpUltimoProduto" class="last-read-card">
@@ -2283,32 +2328,36 @@ function atualizarToggleSons(){
 }
 
 function tocarSom(tipo){
-  if(!sonsConferenciaAtivos) return;
+  // Erros sempre emitem som. Sons de sucesso/alerta continuam respeitando a preferência.
+  if(tipo !== "erro" && !sonsConferenciaAtivos) return;
 
   try{
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
 
     const config = {
-      sucesso:{freq:880,duracao:.09,repeticoes:1},
-      alerta:{freq:520,duracao:.16,repeticoes:2},
-      erro:{freq:220,duracao:.45,repeticoes:1}
-    }[tipo] || {freq:440,duracao:.12,repeticoes:1};
+      sucesso:{freq:880,duracao:.08,repeticoes:1,intervalo:.11},
+      alerta:{freq:500,duracao:.13,repeticoes:2,intervalo:.18},
+      erro:{freq:210,duracao:.20,repeticoes:2,intervalo:.27}
+    }[tipo] || {freq:440,duracao:.10,repeticoes:1,intervalo:.12};
 
-    osc.frequency.value = config.freq;
-    osc.type = "sine";
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    for(let i=0;i<config.repeticoes;i++){
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const inicio = ctx.currentTime + (i * config.intervalo);
 
-    const agora = ctx.currentTime;
-    gain.gain.setValueAtTime(.0001,agora);
-    gain.gain.exponentialRampToValueAtTime(.18,agora+.01);
-    gain.gain.exponentialRampToValueAtTime(.0001,agora+config.duracao);
+      osc.frequency.value = config.freq;
+      osc.type = tipo === "erro" ? "square" : "sine";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
 
-    osc.start(agora);
-    osc.stop(agora+config.duracao+.03);
+      gain.gain.setValueAtTime(.0001,inicio);
+      gain.gain.exponentialRampToValueAtTime(tipo === "erro" ? .24 : .16,inicio+.01);
+      gain.gain.exponentialRampToValueAtTime(.0001,inicio+config.duracao);
+
+      osc.start(inicio);
+      osc.stop(inicio+config.duracao+.02);
+    }
   }catch(error){
     console.warn("Não foi possível tocar o som.",error);
   }
@@ -2414,6 +2463,10 @@ function dashboardStatus(status){
     return { texto:"Em conferência", classe:"progress" };
   }
 
+  if(status === "cancelado"){
+    return { texto:"Cancelado", classe:"cancelled" };
+  }
+
   return { texto:"Aguardando", classe:"pending" };
 }
 
@@ -2511,6 +2564,21 @@ async function carregarDashboard(){
 }
 
 // ---------- Conferência de Pedidos ----------
+
+function definirMultiplicadorConferencia(valor){
+  const mult = Math.max(1,Math.floor(Number(valor || 1)));
+  const campo = $("#cpMultiplicador");
+
+  if(campo) campo.value = mult;
+
+  $$("[data-cp-mult]").forEach(btn=>{
+    btn.classList.toggle("active",Number(btn.dataset.cpMult) === mult);
+  });
+
+  cpFocarLeitor();
+}
+
+
 let cpPedidosCache = [];
 let cpPedidoAtual = null;
 let cpItensMap = new Map();
@@ -2672,6 +2740,9 @@ async function abrirPedidoConferencia(id){
     $("#cpPedidoInfo").textContent = `${pedido.pedido} — ${pedido.cliente || ""}`;
     $("#cpVolumes").value = pedido.volumes || "";
     $("#cpVolumes").disabled = false;
+    definirMultiplicadorConferencia(1);
+    $("#btnCpCancelar").classList.remove("hidden");
+    $("#btnCpRomaneio").classList.remove("hidden");
     $("#cpUltimaLeitura").textContent = "Aguardando a primeira leitura.";
     atualizarPainelUltimaLeitura("",{});
     $("#cpMensagemFinal").classList.add("hidden");
@@ -2758,8 +2829,7 @@ function renderizarConferenciaPedido(){
       <td>${status}</td>
       <td>
         ${cpModoHistorico ? "—" : `<div class="cp-actions">
-          <button class="btn" onclick="ajustarItemConferencia('${item.chave}',-1)">−1</button>
-          <button class="btn" onclick="ajustarItemConferencia('${item.chave}',1)">+1</button>
+          <button class="btn" onclick="editarQuantidadeConferida('${item.chave}')">✏️ Corrigir quantidade</button>
         </div>`}
       </td>
     </tr>`;
@@ -2795,7 +2865,9 @@ async function processarCodigoConferenciaPedido(codigo){
     }
 
     const produto = resultado.produto;
-    const quantidade = Number(resultado.quantidade || 1);
+    const quantidadeBase = Number(resultado.quantidade || 1);
+    const multiplicador = Math.max(1, Math.floor(Number($("#cpMultiplicador").value || 1)));
+    const quantidade = quantidadeBase * multiplicador;
     const chave = cpChave(
       produto.codigo,
       converterGradeTxt(produto.grade1),
@@ -2839,6 +2911,9 @@ async function processarCodigoConferenciaPedido(codigo){
     tocarSom(ultrapassou?"alerta":"sucesso");
     renderizarConferenciaPedido();
     await salvarProgressoConferenciaPedido();
+
+    // O multiplicador vale somente para a próxima leitura, como em caixa de mercado.
+    definirMultiplicadorConferencia(1);
   }catch(error){
     console.error(error);
     toast("Erro ao processar a leitura.",false);
@@ -2851,24 +2926,45 @@ async function processarCodigoConferenciaPedido(codigo){
 }
 
 
-async function ajustarItemConferencia(chave,delta){
+async function editarQuantidadeConferida(chave){
   if(cpModoHistorico || !cpPedidoAtual) return;
 
   const item = cpItensMap.get(chave);
   if(!item) return;
 
-  const novaQuantidade = Math.max(0,item.quantidadeConferida + delta);
-  const alteracaoReal = novaQuantidade - item.quantidadeConferida;
+  const resposta = prompt(
+    `Quantidade CONFERIDA correta para:
+${item.codigo} - ${item.descricao}
+${item.grade1} / ${item.grade2} / ${item.grade3}`,
+    String(item.quantidadeConferida)
+  );
 
-  if(alteracaoReal === 0){
+  if(resposta === null){
     cpFocarLeitor();
     return;
   }
 
-  let motivo = "Ajuste manual durante a conferência";
-  if(alteracaoReal < 0){
-    motivo = prompt("Motivo da retirada física:", "Produto retirado do palhete") || "Produto retirado do palhete";
+  const novaQuantidade = Number(String(resposta).replace(",","."));
+
+  if(!Number.isInteger(novaQuantidade) || novaQuantidade < 0){
+    toast("Informe uma quantidade inteira válida.",false);
+    cpFocarLeitor();
+    return;
   }
+
+  if(novaQuantidade === item.quantidadeConferida){
+    cpFocarLeitor();
+    return;
+  }
+
+  const quantidadeAnterior = item.quantidadeConferida;
+  const alteracao = novaQuantidade - quantidadeAnterior;
+  const motivo = (
+    prompt(
+      "Motivo da correção:",
+      alteracao < 0 ? "Produto retirado fisicamente do palhete" : "Correção manual da conferência"
+    ) || "Correção manual da conferência"
+  ).trim();
 
   item.quantidadeConferida = novaQuantidade;
   cpItensMap.set(chave,item);
@@ -2883,14 +2979,16 @@ async function ajustarItemConferencia(chave,delta){
       grade1:item.grade1,
       grade2:item.grade2,
       grade3:item.grade3,
-      alteracao:alteracaoReal,
-      quantidadeAposAjuste:item.quantidadeConferida,
+      quantidadeAnterior,
+      quantidadeNova:novaQuantidade,
+      alteracao,
+      quantidadeAposAjuste:novaQuantidade,
       motivo
     });
   }
 
   $("#cpUltimaLeitura").textContent =
-    `Ajuste manual: ${item.codigo} ${alteracaoReal>0?"+":""}${alteracaoReal}.`;
+    `Quantidade corrigida: ${item.codigo} de ${quantidadeAnterior} para ${novaQuantidade}.`;
 
   cpFocarLeitor();
 }
@@ -2928,7 +3026,10 @@ async function carregarHistoricoConferencias(){
 
       let bateData = true;
       if(data){
-        const timestamp = pedido.conferenciaFinalizadaEm?.seconds;
+        const timestamp = (
+          pedido.conferenciaFinalizadaEm?.seconds
+          || pedido.canceladoEm?.seconds
+        );
         if(timestamp){
           const d = new Date(timestamp*1000);
           const chave = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -2951,19 +3052,22 @@ async function carregarHistoricoConferencias(){
     lista.innerHTML = filtrados.map(pedido=>{
       const itens = Array.isArray(pedido.itens)?pedido.itens:[];
       const esperado = itens.reduce((s,i)=>s+Number(i.quantidadeEsperada||0),0);
-      const dataFim = pedido.conferenciaFinalizadaEm?.seconds
-        ? new Date(pedido.conferenciaFinalizadaEm.seconds*1000).toLocaleString("pt-BR")
+      const timestampFim = pedido.conferenciaFinalizadaEm?.seconds || pedido.canceladoEm?.seconds;
+      const dataFim = timestampFim
+        ? new Date(timestampFim*1000).toLocaleString("pt-BR")
         : "Sem data";
+
+      const cancelado = pedido.status === "cancelado";
 
       return `<div class="cp-order-card">
         <div class="row" style="justify-content:space-between">
           <h3>${escapeHtml(pedido.pedido||"Sem número")}</h3>
-          <span class="cp-status progress">Conferido</span>
+          <span class="cp-status ${cancelado?"cancelled":"progress"}">${cancelado?"Cancelado":"Conferido"}</span>
         </div>
         <div class="muted">${escapeHtml(pedido.cliente||"")}</div>
         <div class="cp-order-meta">
           <div class="meta"><div class="muted">Peças</div><strong>${esperado}</strong></div>
-          <div class="meta"><div class="muted">Finalizado</div><strong>${escapeHtml(dataFim)}</strong></div>
+          <div class="meta"><div class="muted">${cancelado?"Cancelado":"Finalizado"}</div><strong>${escapeHtml(dataFim)}</strong></div>
         </div>
         <button class="btn primary" style="width:100%" onclick="abrirHistoricoConferencia('${pedido.id}')">Consultar</button>
       </div>`;
@@ -3003,9 +3107,18 @@ async function abrirHistoricoConferencia(id){
   $("#cpPedidoInfo").textContent = `${pedido.pedido} — ${pedido.cliente||""}`;
   $("#cpVolumes").value = pedido.volumes || "";
   $("#cpVolumes").disabled = true;
+  $("#btnCpCancelar").classList.add("hidden");
+  $("#btnCpRomaneio").classList.toggle("hidden",pedido.status !== "conferido");
   $("#cpScanArea").classList.add("hidden");
   $("#cpAcoesConferencia").classList.add("hidden");
-  $("#cpMensagemFinal").classList.remove("hidden");
+  if(pedido.status === "cancelado"){
+    $("#cpMensagemFinal").classList.remove("hidden");
+    $("#cpMensagemFinal").innerHTML =
+      `❌ CONFERÊNCIA CANCELADA${pedido.motivoCancelamento ? `<br><span class="tiny">${escapeHtml(pedido.motivoCancelamento)}</span>` : ""}`;
+  }else{
+    $("#cpMensagemFinal").classList.remove("hidden");
+    $("#cpMensagemFinal").textContent = "✅ REQUISIÇÃO CONFERIDA COM SUCESSO";
+  }
 
   renderizarConferenciaPedido();
 }
@@ -3220,6 +3333,69 @@ async function desfazerLeituraConferenciaPedido(){
 
   $("#cpUltimaLeitura").textContent = "Última leitura desfeita.";
   cpFocarLeitor();
+}
+
+
+async function cancelarConferenciaPedido(){
+  if(!cpPedidoAtual || cpModoHistorico) return;
+
+  if(!perfilUsuarioAtual || perfilUsuarioAtual.perfil !== "administrador"){
+    toast("Somente o administrador pode cancelar uma conferência.",false);
+    return;
+  }
+
+  const motivo = (
+    prompt(
+      `Motivo do cancelamento do pedido ${cpPedidoAtual.pedido}:`,
+      "Pedido cancelado na separação"
+    ) || ""
+  ).trim();
+
+  if(!motivo){
+    toast("Informe o motivo do cancelamento.",false);
+    return;
+  }
+
+  const senha = prompt(
+    "Digite sua senha de login para confirmar o cancelamento:"
+  );
+
+  if(!senha) return;
+
+  if(!confirm(
+    `Confirmar o CANCELAMENTO da conferência do pedido ${cpPedidoAtual.pedido}?\n\nO pedido sairá da lista de pendentes e ficará registrado no histórico como CANCELADO.`
+  )){
+    return;
+  }
+
+  const btn = $("#btnCpCancelar");
+  btn.disabled = true;
+  btn.textContent = "Cancelando...";
+
+  try{
+    await window.firebaseCancelarConferenciaPedido(
+      cpPedidoAtual.id,
+      senha,
+      motivo
+    );
+
+    toast("Conferência cancelada e registrada no histórico.");
+    voltarListaConferenciaPedidos();
+  }catch(error){
+    console.error(error);
+
+    const mensagem = (
+      error?.code === "auth/invalid-credential"
+      || error?.code === "auth/wrong-password"
+    )
+      ? "Senha incorreta. Cancelamento não realizado."
+      : (error.message || "Não foi possível cancelar a conferência.");
+
+    toast(mensagem,false);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Cancelar Conferência";
+  }
 }
 
 async function finalizarConferenciaPedido(){
@@ -4042,6 +4218,16 @@ function limparBateuFuturo(){
     $("#btnCpVoltar").onclick = voltarListaConferenciaPedidos;
     $("#btnCpDesfazer").onclick = desfazerLeituraConferenciaPedido;
     $("#btnCpFinalizar").onclick = finalizarConferenciaPedido;
+    $("#btnCpCancelar").onclick = cancelarConferenciaPedido;
+
+    $$("[data-cp-mult]").forEach(btn=>{
+      btn.onclick = ()=>definirMultiplicadorConferencia(btn.dataset.cpMult);
+    });
+
+    $("#cpMultiplicador").addEventListener("change",event=>{
+      definirMultiplicadorConferencia(event.currentTarget.value);
+    });
+
     $("#cpVolumes").addEventListener("change", async ()=>{
       if(cpModoHistorico || !cpPedidoAtual) return;
       const volumes = Number($("#cpVolumes").value || 0);
@@ -4156,7 +4342,9 @@ montarCalendario();
     signInWithEmailAndPassword,
     signOut,
     sendPasswordResetEmail,
-    onAuthStateChanged
+    onAuthStateChanged,
+    EmailAuthProvider,
+    reauthenticateWithCredential
   } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
   import {
     getFirestore,
@@ -4477,11 +4665,11 @@ montarCalendario();
       .map(documento=>({id:documento.id,...documento.data()}))
       .filter(pedido=>
         pedido.origem === "requisicoes_separacao"
-        && pedido.status === "conferido"
+        && ["conferido","cancelado"].includes(pedido.status)
       )
       .sort((a,b)=>{
-        const ta = a.conferenciaFinalizadaEm?.seconds || 0;
-        const tb = b.conferenciaFinalizadaEm?.seconds || 0;
+        const ta = a.conferenciaFinalizadaEm?.seconds || a.canceladoEm?.seconds || 0;
+        const tb = b.conferenciaFinalizadaEm?.seconds || b.canceladoEm?.seconds || 0;
         return tb-ta;
       });
   };
@@ -4533,6 +4721,29 @@ montarCalendario();
       status:"em_conferencia",
       itens,
       volumes:Number(volumes || 0),
+      atualizadoEm:serverTimestamp()
+    });
+  };
+
+
+  window.firebaseCancelarConferenciaPedido = async (pedidoId,senha,motivo) => {
+    const user = auth.currentUser;
+
+    if(!user || !user.email){
+      throw new Error("Usuário não autenticado.");
+    }
+
+    const credencial = EmailAuthProvider.credential(user.email,senha);
+    await reauthenticateWithCredential(user,credencial);
+
+    const referencia = doc(db,"pedidos",pedidoId);
+
+    await updateDoc(referencia,{
+      status:"cancelado",
+      motivoCancelamento:motivo,
+      canceladoEm:serverTimestamp(),
+      canceladoPorUid:user.uid,
+      canceladoPorEmail:user.email,
       atualizadoEm:serverTimestamp()
     });
   };
