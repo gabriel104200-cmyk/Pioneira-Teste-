@@ -440,7 +440,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v4.7</span>
+        <span class="pill" id="ver">v4.8</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -548,7 +548,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 4.7 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 4.8 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -3683,7 +3683,8 @@ async function gerarTxtReqConfBipagem(){
   }
 
   if(!window.firebaseBuscarProdutoPorId){
-    toast("Módulo do Firebase ainda está carregando.",false);
+    toast("Firebase ainda não terminou de inicializar. Aguarde alguns segundos e tente novamente.",false);
+    focarLeitorReqConf();
     return;
   }
 
@@ -4868,6 +4869,20 @@ montarCalendario();
     }
 
     await batch.commit();
+  };
+
+  window.firebaseBuscarProdutoPorId = async (produtoId) => {
+    if(!produtoId) return null;
+
+    const referencia = doc(db,"produtos",produtoId);
+    const snapshot = await getDoc(referencia);
+
+    if(!snapshot.exists()) return null;
+
+    return {
+      id:snapshot.id,
+      ...snapshot.data()
+    };
   };
 
   window.firebaseSalvarEstruturaProduto = async (produtoId,estrutura) => {
