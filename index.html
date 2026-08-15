@@ -412,6 +412,17 @@
     }
     @media(max-width:700px){.cp-mult-grid{grid-template-columns:1fr}}
 
+
+    .produto-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    .produto-tabs .btn.active{background:linear-gradient(135deg,var(--accent),#4c1d95);border-color:transparent}
+    .estrutura-box{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:15px;background:rgba(16,19,28,.48)}
+    .estrutura-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .estrutura-table-wrap{overflow:auto;margin-top:12px}.estrutura-table-wrap table{min-width:1250px}
+    .estrutura-actions{display:flex;gap:6px;flex-wrap:wrap}.estrutura-actions .btn{padding:6px 8px;border-radius:8px;font-size:12px}
+    .estrutura-preview{margin-top:12px;padding:12px;border:1px dashed rgba(124,58,237,.45);border-radius:12px;background:rgba(124,58,237,.07)}
+    @media(max-width:1000px){.estrutura-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:650px){.estrutura-grid{grid-template-columns:1fr}}
+
     .hidden{display:none}
   </style>
 </head>
@@ -429,7 +440,7 @@
     <div class="topbar">
       <div class="brand">
         <div style="font-size:18px;font-weight:900">Sistema Pioneira</div>
-        <span class="pill" id="ver">v4.5</span>
+        <span class="pill" id="ver">v4.6</span>
       </div>
       <div class="row">
         <span class="tag" id="userTag">Deslogado</span>
@@ -537,7 +548,7 @@
               <p class="muted tiny login-footer">Você receberá um e-mail do Firebase para redefinir sua senha.</p>
             </div>
 
-            <div class="muted tiny login-footer">Versão 4.5 • Pioneira Indústria Têxtil</div>
+            <div class="muted tiny login-footer">Versão 4.6 • Pioneira Indústria Têxtil</div>
           </div>
         </div>
 
@@ -1026,11 +1037,16 @@
         <h2 id="produtoModalTitulo">Novo Produto</h2>
         <button class="btn" id="btnFecharProdutoModal">✕</button>
       </div>
+      <div class="produto-tabs">
+        <button class="btn active" type="button" id="btnAbaProdutoDados">Dados do Produto</button>
+        <button class="btn" type="button" id="btnAbaProdutoEstrutura">Estrutura / Movimentação</button>
+      </div>
 
       <input id="produtoEditId" type="hidden">
       <input id="produtoEditCodigoUnidadeAntigo" type="hidden">
       <input id="produtoEditCodigoCaixaAntigo" type="hidden">
 
+      <div id="produtoAbaDados">
       <div class="modal-grid">
         <div>
           <label class="muted">Código</label>
@@ -1081,9 +1097,48 @@
         <button class="btn" id="btnCancelarProduto">Cancelar</button>
         <button class="btn good" id="btnSalvarProduto">Salvar Produto</button>
       </div>
+      </div>
+
+      <div id="produtoAbaEstrutura" class="hidden">
+        <div class="estrutura-box">
+          <h3 style="margin-top:0">⚙️ Configuração da movimentação do produto acabado</h3>
+          <div class="estrutura-grid">
+            <div><label class="muted">Local de entrada do produto acabado</label><input id="estruturaLocalEntrada" placeholder="Ex.: 1175"></div>
+            <div><label class="muted">Local de saída para requisição</label><input id="estruturaLocalSaidaReq" placeholder="Ex.: 1561"></div>
+            <div><label class="muted">Filial</label><select id="estruturaFilial"><option value="1">M1</option><option value="3">M3</option></select></div>
+            <div><label class="muted">Preço unitário padrão</label><input id="estruturaPrecoUnit" value="0,01"></div>
+          </div>
+        </div>
+        <div class="estrutura-box">
+          <div class="row" style="justify-content:space-between"><div><h3 style="margin:0">🧩 Insumos do produto</h3><div class="muted tiny">Cadastre como cada insumo consome as grades do produto final.</div></div><button class="btn good" type="button" id="btnNovoInsumoEstrutura">➕ Adicionar Insumo</button></div>
+          <div id="estruturaLista" class="estrutura-table-wrap"></div>
+        </div>
+        <div class="estrutura-preview"><strong>Exemplo</strong><br>Produto final: Masculino / Preto / G.<br>Se Grade 1 do insumo ← Grade 2 do produto, Grade 2 ← Grade 1 e Grade 3 ← Grade 3, o insumo será: <strong>Preto / Masculino / G</strong>.</div>
+        <div class="modal-footer"><button class="btn" type="button" id="btnVoltarDadosProduto">Voltar para Dados</button><button class="btn good" type="button" id="btnSalvarEstruturaProduto">Salvar Estrutura</button></div>
+      </div>
     </div>
   </div>
 
+
+  <div id="estruturaInsumoModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="row" style="justify-content:space-between"><h2 id="estruturaInsumoTitulo">Adicionar Insumo</h2><button class="btn" id="btnFecharInsumoEstrutura">✕</button></div>
+      <input id="estruturaInsumoIndex" type="hidden" value="-1">
+      <div class="modal-grid">
+        <div><label class="muted">Código do insumo</label><input id="estruturaInsumoCodigo"></div>
+        <div><label class="muted">Descrição</label><input id="estruturaInsumoDescricao"></div>
+        <div><label class="muted">Quantidade por produto</label><input id="estruturaInsumoQtd" type="number" min="0.001" step="0.001" value="1"></div>
+        <div><label class="muted">Local de saída do insumo</label><input id="estruturaInsumoLocal"></div>
+        <div><label class="muted">Grade 1 do insumo recebe</label><select id="estruturaMapG1"><option value="g1">Grade 1 do produto</option><option value="g2">Grade 2 do produto</option><option value="g3">Grade 3 do produto</option><option value="fixo">Valor fixo</option><option value="vazio">Vazio</option></select></div>
+        <div><label class="muted">Valor fixo Grade 1</label><input id="estruturaFixG1"></div>
+        <div><label class="muted">Grade 2 do insumo recebe</label><select id="estruturaMapG2"><option value="g1">Grade 1 do produto</option><option value="g2">Grade 2 do produto</option><option value="g3">Grade 3 do produto</option><option value="fixo">Valor fixo</option><option value="vazio">Vazio</option></select></div>
+        <div><label class="muted">Valor fixo Grade 2</label><input id="estruturaFixG2"></div>
+        <div><label class="muted">Grade 3 do insumo recebe</label><select id="estruturaMapG3"><option value="g1">Grade 1 do produto</option><option value="g2">Grade 2 do produto</option><option value="g3">Grade 3 do produto</option><option value="fixo">Valor fixo</option><option value="vazio">Vazio</option></select></div>
+        <div><label class="muted">Valor fixo Grade 3</label><input id="estruturaFixG3"></div>
+      </div>
+      <div class="modal-footer"><button class="btn" id="btnCancelarInsumoEstrutura">Cancelar</button><button class="btn good" id="btnSalvarInsumoEstrutura">Salvar Insumo</button></div>
+    </div>
+  </div>
   <div id="produtoHistoricoModal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div class="row" style="justify-content:space-between">
@@ -3687,7 +3742,17 @@ async function salvarPedidoReqConf(){const linhas=montarLinhasReqConf();if(!linh
 let produtosPreview = [];
 let produtosCadastrados = [];
 let produtoFiltroAtual = "";
+let estruturaProdutoAtual = {localEntrada:"",localSaidaReq:"",filial:"1",precoUnit:"0,01",insumos:[]};
 
+function abrirAbaProduto(nome){const dados=nome==="dados";$("#produtoAbaDados").classList.toggle("hidden",!dados);$("#produtoAbaEstrutura").classList.toggle("hidden",dados);$("#btnAbaProdutoDados").classList.toggle("active",dados);$("#btnAbaProdutoEstrutura").classList.toggle("active",!dados);} 
+function carregarEstruturaNoFormulario(produto){const e=produto?.estrutura||{};estruturaProdutoAtual={localEntrada:e.localEntrada||"",localSaidaReq:e.localSaidaReq||"",filial:e.filial||"1",precoUnit:e.precoUnit||"0,01",insumos:Array.isArray(e.insumos)?JSON.parse(JSON.stringify(e.insumos)):[]};$("#estruturaLocalEntrada").value=estruturaProdutoAtual.localEntrada;$("#estruturaLocalSaidaReq").value=estruturaProdutoAtual.localSaidaReq;$("#estruturaFilial").value=estruturaProdutoAtual.filial;$("#estruturaPrecoUnit").value=estruturaProdutoAtual.precoUnit;renderizarEstruturaProduto();}
+function coletarEstruturaCabecalho(){estruturaProdutoAtual.localEntrada=$("#estruturaLocalEntrada").value.trim();estruturaProdutoAtual.localSaidaReq=$("#estruturaLocalSaidaReq").value.trim();estruturaProdutoAtual.filial=$("#estruturaFilial").value;estruturaProdutoAtual.precoUnit=$("#estruturaPrecoUnit").value.trim()||"0,01";}
+function textoMapeamento(m,f){if(m==="g1")return "Grade 1 produto";if(m==="g2")return "Grade 2 produto";if(m==="g3")return "Grade 3 produto";if(m==="fixo")return `Fixo: ${f||""}`;return "Vazio";}
+function renderizarEstruturaProduto(){const ins=estruturaProdutoAtual.insumos||[];if(!ins.length){$("#estruturaLista").innerHTML='<div class="muted" style="padding:12px">Nenhum insumo cadastrado para este produto.</div>';return;}let h='<table><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th><th>Local saída</th><th>Grade 1 insumo</th><th>Grade 2 insumo</th><th>Grade 3 insumo</th><th>Ações</th></tr></thead><tbody>';ins.forEach((i,x)=>{h+=`<tr><td>${escapeHtml(i.codigo||"")}</td><td>${escapeHtml(i.descricao||"")}</td><td>${escapeHtml(String(i.quantidade||1))}</td><td>${escapeHtml(i.localSaida||"")}</td><td>${escapeHtml(textoMapeamento(i.mapG1,i.fixG1))}</td><td>${escapeHtml(textoMapeamento(i.mapG2,i.fixG2))}</td><td>${escapeHtml(textoMapeamento(i.mapG3,i.fixG3))}</td><td><div class="estrutura-actions"><button class="btn primary" onclick="editarInsumoEstrutura(${x})">✏️ Editar</button><button class="btn warn" onclick="removerInsumoEstrutura(${x})">🗑️ Remover</button></div></td></tr>`;});h+='</tbody></table>';$("#estruturaLista").innerHTML=h;}
+function abrirInsumoEstrutura(i=null,x=-1){$("#estruturaInsumoModal").classList.remove("hidden");$("#estruturaInsumoTitulo").textContent=i?"Editar Insumo":"Adicionar Insumo";$("#estruturaInsumoIndex").value=x;$("#estruturaInsumoCodigo").value=i?.codigo||"";$("#estruturaInsumoDescricao").value=i?.descricao||"";$("#estruturaInsumoQtd").value=i?.quantidade??1;$("#estruturaInsumoLocal").value=i?.localSaida||"";$("#estruturaMapG1").value=i?.mapG1||"g1";$("#estruturaFixG1").value=i?.fixG1||"";$("#estruturaMapG2").value=i?.mapG2||"g2";$("#estruturaFixG2").value=i?.fixG2||"";$("#estruturaMapG3").value=i?.mapG3||"g3";$("#estruturaFixG3").value=i?.fixG3||"";}
+function fecharInsumoEstrutura(){$("#estruturaInsumoModal").classList.add("hidden");} function editarInsumoEstrutura(x){abrirInsumoEstrutura(estruturaProdutoAtual.insumos[x],x);} function removerInsumoEstrutura(x){const i=estruturaProdutoAtual.insumos[x];if(!confirm(`Remover o insumo ${i.codigo} da estrutura?`))return;estruturaProdutoAtual.insumos.splice(x,1);renderizarEstruturaProduto();}
+function salvarInsumoEstrutura(){const x=Number($("#estruturaInsumoIndex").value);const i={codigo:$("#estruturaInsumoCodigo").value.trim(),descricao:$("#estruturaInsumoDescricao").value.trim(),quantidade:Number($("#estruturaInsumoQtd").value||1),localSaida:$("#estruturaInsumoLocal").value.trim(),mapG1:$("#estruturaMapG1").value,fixG1:$("#estruturaFixG1").value.trim(),mapG2:$("#estruturaMapG2").value,fixG2:$("#estruturaFixG2").value.trim(),mapG3:$("#estruturaMapG3").value,fixG3:$("#estruturaFixG3").value.trim()};if(!i.codigo||i.quantidade<=0||!i.localSaida){toast("Preencha código, quantidade e local de saída do insumo.",false);return;}if(x>=0)estruturaProdutoAtual.insumos[x]=i;else estruturaProdutoAtual.insumos.push(i);fecharInsumoEstrutura();renderizarEstruturaProduto();}
+async function salvarEstruturaProduto(){const id=$("#produtoEditId").value.trim();if(!id){toast("Salve primeiro os dados do produto antes de cadastrar a estrutura.",false);abrirAbaProduto("dados");return;}coletarEstruturaCabecalho();try{await window.firebaseSalvarEstruturaProduto(id,estruturaProdutoAtual);toast("Estrutura do produto salva com sucesso.");cpProdutosCache=null;await carregarProdutosFirebase();}catch(e){console.error(e);toast("Não foi possível salvar a estrutura.",false);}}
 function normalizarCodigoBarras(valor){
   return String(valor ?? "").trim().replace(/\s+/g, "");
 }
@@ -3970,6 +4035,9 @@ function abrirProdutoModal(produto=null){
   $("#produtoEditCodigoUnidadeAntigo").value = produto?.codigoUnidade || "";
   $("#produtoEditCodigoCaixaAntigo").value = produto?.codigoCaixa || "";
 
+  carregarEstruturaNoFormulario(produto);
+  abrirAbaProduto("dados");
+
   setTimeout(()=>$("#produtoEditCodigo").focus(),60);
 }
 
@@ -4001,6 +4069,7 @@ function lerFormularioProduto(){
     caixa: Number($("#produtoEditCaixa").value || 0),
     codigoCaixa: normalizarCodigoBarras($("#produtoEditCodigoCaixa").value),
     ativo: $("#produtoEditAtivo").value === "true",
+    estrutura: estruturaProdutoAtual,
     codigoUnidadeAntigo: $("#produtoEditCodigoUnidadeAntigo").value.trim(),
     codigoCaixaAntigo: $("#produtoEditCodigoCaixaAntigo").value.trim()
   };
@@ -4290,6 +4359,15 @@ function limparBateuFuturo(){
       renderizarProdutos();
     });
 
+    $("#btnAbaProdutoDados").onclick = ()=>abrirAbaProduto("dados");
+    $("#btnAbaProdutoEstrutura").onclick = ()=>abrirAbaProduto("estrutura");
+    $("#btnVoltarDadosProduto").onclick = ()=>abrirAbaProduto("dados");
+    $("#btnNovoInsumoEstrutura").onclick = ()=>abrirInsumoEstrutura();
+    $("#btnFecharInsumoEstrutura").onclick = fecharInsumoEstrutura;
+    $("#btnCancelarInsumoEstrutura").onclick = fecharInsumoEstrutura;
+    $("#btnSalvarInsumoEstrutura").onclick = salvarInsumoEstrutura;
+    $("#btnSalvarEstruturaProduto").onclick = salvarEstruturaProduto;
+
     $("#btnFecharProdutoModal").onclick = fecharProdutoModal;
     $("#btnCancelarProduto").onclick = fecharProdutoModal;
     $("#btnSalvarProduto").onclick = salvarProdutoFormulario;
@@ -4301,6 +4379,10 @@ function limparBateuFuturo(){
 
     $("#produtoHistoricoModal").addEventListener("click",event=>{
       if(event.target.id === "produtoHistoricoModal") fecharHistoricoProduto();
+    });
+
+    $("#estruturaInsumoModal").addEventListener("click",event=>{
+      if(event.target.id === "estruturaInsumoModal") fecharInsumoEstrutura();
     });
 
     [$("#lgUser"), $("#lgPass")].forEach(campo =>{
@@ -4456,6 +4538,7 @@ montarCalendario();
         caixa:produto.caixa,
         codigoCaixa:produto.codigoCaixa,
         ativo:produto.ativo !== false,
+        estrutura:anterior?.estrutura || null,
         atualizadoEm:serverTimestamp(),
         atualizadoPor:auth.currentUser ? auth.currentUser.uid : null,
         historico:arrayUnion(
@@ -4541,6 +4624,7 @@ montarCalendario();
       caixa:produto.caixa,
       codigoCaixa:produto.codigoCaixa,
       ativo:produto.ativo,
+      estrutura:produto.estrutura || anterior?.estrutura || null,
       atualizadoEm:serverTimestamp(),
       atualizadoPor:auth.currentUser ? auth.currentUser.uid : null,
       criadoEm:anterior?.criadoEm || serverTimestamp(),
@@ -4616,6 +4700,11 @@ montarCalendario();
     }
 
     await batch.commit();
+  };
+
+  window.firebaseSalvarEstruturaProduto = async (produtoId,estrutura) => {
+    const referencia = doc(db,"produtos",produtoId);
+    await updateDoc(referencia,{estrutura,atualizadoEm:serverTimestamp(),atualizadoPor:auth.currentUser ? auth.currentUser.uid : null,historico:arrayUnion(historicoProduto("Estrutura de produção alterada",`Estrutura atualizada com ${(estrutura.insumos||[]).length} insumo(s).`))});
   };
 
   window.firebaseBuscarProdutoPorBarra = async (codigoBarra) => {
